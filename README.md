@@ -1,6 +1,6 @@
 # Audio Reader · 有声文稿
 
-我经常将长文稿转为音频来听，但我没有找到合适的应用，专门为了在播放音频的时候自动滚动文稿而设计。所以我用 Fable 5.1，耗时五个小时，搓了这个小网站：https://marksonchen.github.io/audio-reader/ （试试提供的示例）
+我经常将长文稿转为音频来听，但市面上此刻并不存在合适的应用，是专门为了在播放音频时自动滚动文稿而设计的。所以我用 Fable 5.1，耗时五个小时，搓了这个小网站：https://marksonchen.github.io/audio-reader/ （可以试试网站里提供的demo）
 
 ![阅读界面](docs/images/reader.png)
 

@@ -48,7 +48,7 @@ interface SessionState {
 
 const DEMO_TITLE = '全球脑科学科研组织的二十年'
 /** Bump when the bundled demo files change so cached copies get refreshed. */
-const DEMO_VERSION = 4
+const DEMO_VERSION = 5
 
 let toastTimer = 0
 let loadSeq = 0
@@ -181,15 +181,15 @@ export const useSession = create<SessionState>()((set, get) => {
           fetch(`${base}demo.opus`),
           fetch(`${base}demo.srt`),
           fetch(`${base}demo.txt`),
-          fetch(`${base}demo.words.json`).catch(() => null),
+          fetch(`${base}demo.words.srt`).catch(() => null),
         ])
         if (!audioRes.ok || !srtRes.ok || !txtRes.ok) throw new Error('示例文件缺失，请确认 public/demo 目录完整。')
         const audio = await audioRes.blob()
-        // Prefer the forced-alignment word timings when they ship with the demo.
+        // Prefer the forced-alignment word-level subtitle when it ships with the demo.
         const wordsText = wordsRes && wordsRes.ok ? await wordsRes.text() : ''
-        const hasWords = wordsText.trimStart().startsWith('{')
+        const hasWords = /^\s*1\s*\n\d{2}:\d{2}:\d{2},\d{3} -->/.test(wordsText)
         const subtitleText = hasWords ? wordsText : await srtRes.text()
-        const subtitleName = hasWords ? `${DEMO_TITLE}.words.json` : `${DEMO_TITLE}.srt`
+        const subtitleName = hasWords ? `${DEMO_TITLE}.words.srt` : `${DEMO_TITLE}.srt`
         const now = Date.now()
         const data: SessionData = {
           id: crypto.randomUUID(),
