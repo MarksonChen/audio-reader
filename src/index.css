@@ -12,6 +12,8 @@
   --line: rgba(60, 48, 34, 0.1);
   --line-strong: rgba(60, 48, 34, 0.2);
   --fg: #1f1b16;
+  /* Reading text: same as --fg on light themes, a little dimmer than pure UI text on dark. */
+  --text: var(--fg);
   --fg-2: #66604f;
   --muted: #9a9387;
   --sent-past: #7d766a;
@@ -33,6 +35,7 @@
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.16);
   --fg: #ebe8e2;
+  --text: #cfccc5;
   --fg-2: #aaa59c;
   --muted: #76726b;
   --sent-past: #8b867d;
@@ -658,7 +661,7 @@ button:disabled {
 .para {
   position: relative;
   margin: 0 0 1.05em;
-  color: var(--fg);
+  color: var(--text);
   text-align: justify;
   overflow-wrap: anywhere;
   transition: opacity 0.4s;
@@ -738,7 +741,7 @@ h3.para .ts {
 }
 .sent.active {
   background: var(--accent-soft);
-  color: var(--fg);
+  color: var(--text);
 }
 .sent.active:hover {
   background: color-mix(in srgb, var(--accent-soft) 100%, var(--accent) 6%);
@@ -760,7 +763,7 @@ h3.para .ts {
   color: var(--accent);
 }
 .sent.karaoke .ch.cur {
-  color: var(--fg);
+  color: var(--text);
 }
 .debug {
   position: fixed;

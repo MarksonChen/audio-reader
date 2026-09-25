@@ -60,7 +60,7 @@ function KaraokeSentence({ s, blockCues, onSeek }: { s: Sentence; blockCues?: Fl
       frac = b > a ? Math.min(1, Math.max(0, (t - a) / (b - a))) : 1
     }
   }
-  const mix = `color-mix(in oklab, var(--accent) ${Math.round(frac * 100)}%, var(--fg))`
+  const mix = `color-mix(in oklab, var(--accent) ${Math.round(frac * 100)}%, var(--text))`
 
   useLayoutEffect(() => {
     if (DEBUG && ref.current && cur >= 0) measureKaraoke(ref.current, cur)
