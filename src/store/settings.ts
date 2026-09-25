@@ -74,7 +74,7 @@ export const DEFAULT_SETTINGS: Settings = {
   smoothScroll: true,
   skipSeconds: 15,
   rate: 1,
-  volume: 1,
+  volume: 0.5,
   muted: false,
   sentenceEnd: 'continue',
   playOnClick: true,
@@ -102,10 +102,12 @@ export const useSettings = create<SettingsStore>()(
     }),
     {
       name: 'audio-reader.settings',
-      version: 3,
-      migrate: (persisted) => {
+      version: 4,
+      migrate: (persisted, version) => {
         const p = { ...(persisted as Partial<Record<keyof Settings, unknown>>) }
         if (typeof p.measure === 'string') p.measure = LEGACY_MEASURE[p.measure] ?? 42
+        // v3 defaulted the volume to 100%; a stored 1 almost certainly means "never touched".
+        if (version < 4 && p.volume === 1) p.volume = DEFAULT_SETTINGS.volume
         return { ...DEFAULT_SETTINGS, ...(p as Partial<Settings>) }
       },
     },
