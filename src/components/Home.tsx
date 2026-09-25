@@ -129,7 +129,7 @@ export function Home() {
 
   return (
     <div
-      className={`home ${drag ? 'dragging' : ''}`}
+      className={`home ${drag ? 'dragging' : ''} ${recents.length ? '' : 'centered'}`}
       onDragEnter={(e) => {
         e.preventDefault()
         dragDepth.current++
@@ -242,11 +242,6 @@ export function Home() {
           </section>
         )}
 
-        <footer className="home-foot">
-          <a href="https://github.com/MarksonChen/audio-reader" target="_blank" rel="noreferrer">
-            github.com/MarksonChen/audio-reader
-          </a>
-        </footer>
       </div>
 
       {status === 'loading' && (
