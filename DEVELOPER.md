@@ -46,7 +46,7 @@ public/demo    示例：24k Opus 音频、ASR 字幕、原稿、词级时间 JSO
 
 ## 逐词字幕（stable-ts 强制对齐）
 
-`scripts/align.py` 是一个自包含的 uv 脚本（PEP 723 内联依赖），输入音频加一份文字来源，输出逐词 SRT 与 JSON：
+`scripts/align.py` 是一个自包含的 uv 脚本（PEP 723 内联依赖），输入音频加一份文字来源，输出逐词 SRT：
 
 ```bash
 uv run scripts/align.py 音频.mp3 字幕.srt              # 文字来源可以是 srt / vtt / lrc
@@ -60,7 +60,7 @@ uv run scripts/align.py --help
   （ASR 字幕常在句中硬切行，按行分段会让对齐质量明显变差：示例里零时长词从 783 降到 216）。
   原稿作为来源时按行分段。
 - 输出的 `.words.srt` 每个词一条；网页会按“每条只有一两个词、时长很短”自动识别为逐词字幕，进入逐字模式。
-  JSON 也兼容 whisper / stable-ts 自带的 `segments[].words[]` 结构。
+  网页另外也接受词级 JSON（示例用的就是它，兼容 whisper / stable-ts 的 `segments[].words[]` 结构）。
 - 模型默认 `small`。在示例音频上，`medium` 慢 3 倍多、零时长词反而更多，与 `small` 的词起点中位数只差 80 毫秒，
   对照 ASR 边界与音频能量起点都没有更准，所以不必升级模型。small 的时间戳相对真实发声整体晚约 50 到 100 毫秒，
   需要的话在设置里把「高亮偏移」调到 +0.10 秒。

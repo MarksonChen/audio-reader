@@ -9,7 +9,6 @@
 不做语音识别，只回答“文字里的每个词是在第几毫秒说出来的”，然后写出：
 
   <音频名>.words.srt   逐词字幕（每个词一条），放进 Audio Reader 的「字幕」槽位即可获得逐字渐变
-  <音频名>.words.json  同样的数据，JSON 形式
 
 用法（需要先安装 uv：https://docs.astral.sh/uv/ ）：
 
@@ -21,7 +20,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import pathlib
 import re
 import sys
@@ -90,7 +88,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("audio", help="音频文件（mp3 / m4a / wav / opus … ffmpeg 能读的都行）")
     ap.add_argument("text", help="字幕（srt / vtt / lrc）或原稿（txt / md）")
-    ap.add_argument("-o", "--out", help="输出文件名前缀（默认与音频同名，写出 .words.srt 和 .words.json）")
+    ap.add_argument("-o", "--out", help="输出文件名前缀（默认与音频同名，写出 <前缀>.words.srt）")
     ap.add_argument("--model", default="small", help="whisper 模型：tiny / base / small / medium / large-v3（默认 small）")
     ap.add_argument("--device", default="cpu", help="cpu、cuda 或 mps（默认 cpu）")
     ap.add_argument("--language", default="zh", help="文字的语言代码（默认 zh）")
@@ -107,7 +105,6 @@ def main() -> int:
         return 1
     out_base = pathlib.Path(args.out) if args.out else audio.with_suffix("")
     out_srt = out_base.with_name(out_base.name + ".words.srt")
-    out_json = out_base.with_name(out_base.name + ".words.json")
 
     import stable_whisper  # 延迟导入，让 --help 保持快速
 
@@ -124,7 +121,7 @@ def main() -> int:
         for w in seg.words:
             wt = w.word.strip()
             if wt:
-                words.append({"text": wt, "start": round(float(w.start), 3), "end": round(float(w.end), 3), "p": round(float(w.probability), 3)})
+                words.append({"text": wt, "start": round(float(w.start), 3), "end": round(float(w.end), 3)})
     if not words:
         print("对齐失败：没有得到任何词", file=sys.stderr)
         return 2
@@ -136,27 +133,10 @@ def main() -> int:
             end = words[i + 1]["start"] if i + 1 < len(words) and words[i + 1]["start"] > w["start"] else w["start"] + 0.05
         lines.append(f"{i + 1}\n{srt_time(w['start'])} --> {srt_time(end)}\n{w['text']}\n")
     out_srt.write_text("\n".join(lines), encoding="utf-8")
-    out_json.write_text(
-        json.dumps(
-            {
-                "format": "audio-reader-words",
-                "version": 1,
-                "source": "stable-ts",
-                "model": args.model,
-                "language": args.language,
-                "audio": audio.name,
-                "text": text_path.name,
-                "words": words,
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
     zero = sum(1 for w in words if w["end"] <= w["start"])
     print(f"完成，用时 {time.time() - t0:.0f} 秒：{len(words)} 个词，零时长 {zero} 个，最后一个词结束于 {words[-1]['end']:.1f} 秒")
     print(f"已写出 {out_srt}")
-    print(f"已写出 {out_json}")
-    print("把 .words.srt（或 .words.json）放进 Audio Reader 的「字幕」槽位，即可获得逐字渐变。")
+    print("把它放进 Audio Reader 的「字幕」槽位，即可获得逐字渐变。")
     return 0
 
 
