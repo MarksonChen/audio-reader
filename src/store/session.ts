@@ -178,12 +178,14 @@ export const useSession = create<SessionState>()((set, get) => {
       if (existing && (existing.demoVersion ?? 1) >= DEMO_VERSION) return get().openStored(existing.id)
       set({ status: 'loading', loadingMessage: '下载示例音频…', error: null })
       try {
+        // The version query defeats stale CDN/browser copies of the demo files after an update.
         const base = `${import.meta.env.BASE_URL}demo/`
+        const v = `?v=${DEMO_VERSION}`
         const [audioRes, srtRes, txtRes, wordsRes] = await Promise.all([
-          fetch(`${base}demo.opus`),
-          fetch(`${base}demo.srt`),
-          fetch(`${base}demo.txt`),
-          fetch(`${base}demo.words.srt`).catch(() => null),
+          fetch(`${base}demo.opus${v}`),
+          fetch(`${base}demo.srt${v}`),
+          fetch(`${base}demo.txt${v}`),
+          fetch(`${base}demo.words.srt${v}`).catch(() => null),
         ])
         if (!audioRes.ok || !srtRes.ok || !txtRes.ok) throw new Error('示例文件缺失，请确认 public/demo 目录完整。')
         const audio = await audioRes.blob()
