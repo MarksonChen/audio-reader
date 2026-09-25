@@ -45,8 +45,6 @@ export function ShortcutsHelp({ skipSeconds, onClose }: { skipSeconds: number; o
             ))}
           </tbody>
         </table>
-        <p className="modal-note">点击任意一句（甚至一个字）都会跳到对应的时间。拖动波形可以快速定位。</p>
-        <p className="modal-note">触屏：在正文上左右滑动前后跳，双击播放 / 暂停，从播放器向上滑呼出设置。</p>
       </div>
     </>
   )
