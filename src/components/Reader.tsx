@@ -4,6 +4,7 @@ import { useMediaSession } from '../hooks/useMediaSession'
 import { DEBUG } from '../lib/debug'
 import { buildActiveIndex, findActive, indexOfId } from '../lib/active'
 import { fmtTime } from '../lib/format'
+import { KEYS, combo } from '../lib/platform'
 import { RATE_STEP, fmtRate, usePlayer } from '../store/player'
 import { useSession } from '../store/session'
 import { FONT_SIZE_RANGE, useSettings } from '../store/settings'
@@ -363,13 +364,13 @@ export function Reader() {
         <div className="hdr-title">
           <h1 title={session.title}>{session.title}</h1>
         </div>
-        <button className={`icon-btn ${panel === 'search' ? 'on' : ''}`} onClick={() => setPanel((p) => (p === 'search' ? 'none' : 'search'))} title="搜索 (⌘F 或 /)">
+        <button className={`icon-btn ${panel === 'search' ? 'on' : ''}`} onClick={() => setPanel((p) => (p === 'search' ? 'none' : 'search'))} title={`搜索 (${combo(KEYS.mod, 'F')} 或 /)`}>
           <Search size={18} />
         </button>
         <button
           className={`icon-btn ${panel === 'settings' || panel === 'accent' || panel === 'font' ? 'on' : ''}`}
           onClick={() => setPanel((p) => (p === 'none' || p === 'help' ? 'settings' : 'none'))}
-          title="阅读设置 (⌘,)"
+          title={`阅读设置 (${combo(KEYS.mod, ',')})`}
         >
           <SlidersHorizontal size={18} />
         </button>

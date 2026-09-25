@@ -1,20 +1,22 @@
 import { X } from 'lucide-react'
+import { KEYS } from '../lib/platform'
 
 function rows(skip: number): [string, string][] {
   const fine = skip <= 5 ? 1 : 5
+  const { mod, alt, shift, joiner } = KEYS
   return [
     ['空格 / K', '播放 / 暂停'],
     ['← / →', `后退 / 前进 ${skip} 秒`],
-    ['⇧ + ← / →', `后退 / 前进 ${fine} 秒`],
-    ['⌥ + ← / →', '上一句 / 下一句'],
-    ['⌥ + ↑ / ↓', '上一段 / 下一段'],
-    ['⌘F 或 /', '搜索正文'],
-    ['[ / ]', '减速 / 加速 0.05（⇧ 为 0.25）'],
+    [`${shift}${joiner}← / →`, `后退 / 前进 ${fine} 秒`],
+    [`${alt}${joiner}← / →`, '上一句 / 下一句'],
+    [`${alt}${joiner}↑ / ↓`, '上一段 / 下一段'],
+    [`${mod}${joiner}F 或 /`, '搜索正文'],
+    ['[ / ]', `减速 / 加速 0.05（${shift} 为 0.25）`],
     ['- / =', '缩小 / 放大字号'],
     ['F', '开关自动跟随'],
     ['Z', '专注阅读，隐藏上下栏（Esc 退出）'],
     ['Enter', '回到当前句'],
-    ['⌘ / Ctrl + ,', '阅读设置'],
+    [`${mod}${joiner},`, '阅读设置'],
     ['?', '本帮助'],
   ]
 }

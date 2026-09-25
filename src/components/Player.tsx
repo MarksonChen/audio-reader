@@ -1,6 +1,7 @@
 import { Minus, Pause, Play, Plus, RotateCcw, RotateCw, SkipBack, SkipForward } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent } from 'react'
 import { fmtTime } from '../lib/format'
+import { KEYS, combo } from '../lib/platform'
 import { RATE_MIN, RATE_STEP, fmtRate, usePlayer } from '../store/player'
 
 const SLIDER_MIN = 0.25
@@ -173,7 +174,7 @@ export function Player({ peaks, slim, skipSeconds, onSeek, onPrevSentence, onNex
             <TimeLabel />
           </div>
           <div className="ctl-center">
-            <button className="icon-btn" title="上一句 (⌥←)" onMouseUp={blur} onClick={onPrevSentence}>
+            <button className="icon-btn" title={`上一句 (${combo(KEYS.alt, '←')})`} onMouseUp={blur} onClick={onPrevSentence}>
               <SkipBack size={18} />
             </button>
             <button className="icon-btn skip" title={`后退 ${skipSeconds} 秒 (←)`} onMouseUp={blur} onClick={() => skip(-skipSeconds)}>
@@ -187,7 +188,7 @@ export function Player({ peaks, slim, skipSeconds, onSeek, onPrevSentence, onNex
               <RotateCw size={22} />
               <span>{skipSeconds}</span>
             </button>
-            <button className="icon-btn" title="下一句 (⌥→)" onMouseUp={blur} onClick={onNextSentence}>
+            <button className="icon-btn" title={`下一句 (${combo(KEYS.alt, '→')})`} onMouseUp={blur} onClick={onNextSentence}>
               <SkipForward size={18} />
             </button>
           </div>
