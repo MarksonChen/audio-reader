@@ -243,7 +243,9 @@ export function Home() {
         )}
 
         <footer className="home-foot">
-          字幕提供时间轴，原稿提供正文。用 scripts/align.py 做强制对齐可得到更精确的时间。
+          <a href="https://github.com/MarksonChen/audio-reader" target="_blank" rel="noreferrer">
+            github.com/MarksonChen/audio-reader
+          </a>
         </footer>
       </div>
 
