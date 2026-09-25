@@ -10,7 +10,7 @@
 
 1. 把三个文件一起拖进首页：
    - **音频**（必需）：MP3、M4A、WAV、Opus、OGG、FLAC 等浏览器能播放的任何格式
-   - **字幕**（必需）：SRT、VTT、LRC，或下面工具生成的逐词字幕
+   - **字幕**（必需）：SRT、VTT、SBV、LRC，或下面工具生成的逐词字幕
    - **原稿**（可选）：TXT 或 Markdown。提供后正文按原稿显示，时间从字幕借用
 2. 点「开始阅读」。在播放时，文字会逐句高亮、自动滚动。
 
@@ -30,7 +30,7 @@
 或者你更愿意手动来：
 
 ```bash
-# 1. 安装 uv（Python 工具，一次即可）：https://docs.astral.sh/uv/getting-started/installation/
+# 1. 安装 uv（https://docs.astral.sh/uv/getting-started/installation/ ）和 ffmpeg（macOS：brew install ffmpeg）
 # 2. 取得仓库
 git clone https://github.com/MarksonChen/audio-reader.git
 cd audio-reader
@@ -79,8 +79,8 @@ uv run scripts/align.py 音频.mp3 字幕.srt
 ## 常见问题
 
 - **文字为什么是整块变色，而不是一个字一个字点亮？** 因为普通字幕只精确到句。用上面的工具生成逐词字幕即可。整体偏早或偏晚可在设置里微调「高亮偏移」。
-- **原稿和字幕内容差别很大？** 匹配不到的句子会以虚线下划线标出；匹配度过低时会改用字幕文字显示。
-- **某个字体在列表里找不到？** 只显示本机安装且已启用的字体；在「字体册」里启用后刷新页面即可。
+- **原稿和字幕内容差别很大？** 匹配不到的句子会以点状下划线标出；匹配度过低时会改用字幕文字显示。
+- **某个字体在列表里找不到？** 列表是固定的三十多种候选，只显示其中本机已安装且已启用的；在「字体册」里启用后刷新页面即可。
 - **换了浏览器或清了数据？** 文件只存在当时的浏览器里，需要重新放入。
 
 技术细节：见 [DEVELOPER.md](DEVELOPER.md)。

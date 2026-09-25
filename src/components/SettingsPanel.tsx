@@ -1,6 +1,7 @@
 import { ChevronRight, Coffee, Monitor, Moon, Sun, X } from 'lucide-react'
 import type { ComponentType, ReactNode } from 'react'
 import { accentColor, accentFor } from '../lib/accents'
+import { closeOnEscape } from '../lib/keys'
 import { fontById } from '../lib/fonts'
 import type { PickerTab } from './AppearancePicker'
 import {
@@ -71,10 +72,13 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
         {label}
         {hint && <small>{hint}</small>}
       </div>
-      <div className="row-ctl">{children}</div>
+      <div className="row-ctl" role="group" aria-label={label}>
+        {children}
+      </div>
     </div>
   )
 }
+
 
 function Switch({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -88,7 +92,7 @@ function Seg<T extends string>({ value, options, onChange, icons }: { value: T; 
   return (
     <div className={`seg ${icons ? 'icons' : ''}`}>
       {options.map(({ id, label, Icon }) => (
-        <button key={id} className={value === id ? 'on' : ''} onClick={() => onChange(id)} title={label}>
+        <button key={id} className={value === id ? 'on' : ''} onClick={() => onChange(id)} title={label} aria-pressed={value === id}>
           {Icon && <Icon size={14} />}
           <span>{label}</span>
         </button>
@@ -133,7 +137,9 @@ function SliderRow({ label, hint, value, min, max, step, defaultValue, format, o
         title="双击恢复默认"
         onChange={(e) => onChange(Number(e.target.value))}
         onDoubleClick={() => onChange(defaultValue)}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key !== 'Escape') e.stopPropagation() // arrows adjust the slider; Escape still closes the panel
+        }}
         aria-label={label}
       />
     </div>
@@ -151,7 +157,7 @@ export function SettingsPanel({ onClose, onPick }: { onClose: () => void; onPick
   return (
     <>
       <div className="backdrop" onClick={onClose} />
-      <div className="panel" role="dialog" aria-label="阅读设置">
+      <div className="panel" role="dialog" aria-label="阅读设置" onKeyDown={closeOnEscape(onClose)}>
         <div className="panel-head">
           <span>阅读设置</span>
           <button className="icon-btn sm" onClick={onClose} title="关闭 (Esc)">

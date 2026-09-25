@@ -49,6 +49,7 @@ interface Props {
 export function Transcript({ doc, activeId, follow, onUserScroll, onSeek }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const programmaticUntil = useRef(0)
+  const lastInput = useRef(0)
   const activeRef = useRef(activeId)
   useLayoutEffect(() => {
     activeRef.current = activeId
@@ -102,6 +103,7 @@ export function Transcript({ doc, activeId, follow, onUserScroll, onSeek }: Prop
       if (dist < 2) return
       const mode: ScrollBehavior = behavior === 'smooth' && dist <= c.clientHeight * 2.5 ? 'smooth' : 'instant'
       programmaticUntil.current = performance.now() + (mode === 'smooth' ? 2000 : 300)
+      lastInput.current = 0 // the click or key that triggered this scroll is not a scroll gesture
       c.scrollTo({ top: t.top, behavior: mode })
     },
     [followTarget],
@@ -116,20 +118,25 @@ export function Transcript({ doc, activeId, follow, onUserScroll, onSeek }: Prop
   useEffect(() => {
     const c = ref.current
     if (!c) return
-    let lastInput = 0
     const markInput = () => {
-      lastInput = performance.now()
+      lastInput.current = performance.now()
     }
     const onKey = (e: KeyboardEvent) => {
-      if (['PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown'].includes(e.key)) markInput()
+      if (['PageUp', 'PageDown', 'Home', 'End'].includes(e.key) || (!e.altKey && ['ArrowUp', 'ArrowDown'].includes(e.key))) markInput()
     }
+    // Measure at most once per frame: scroll events can arrive faster than layout is worth reading.
+    let pending = 0
     const onScroll = () => {
-      const now = performance.now()
-      const userCaused = now - lastInput < 400 || now > programmaticUntil.current
-      if (!userCaused) return
-      const t = followTarget(c)
-      if (!t) return
-      onUserScroll(Math.abs(c.scrollTop - t.top) > t.line)
+      if (pending) return
+      pending = requestAnimationFrame(() => {
+        pending = 0
+        const now = performance.now()
+        const userCaused = now - lastInput.current < 400 || now > programmaticUntil.current
+        if (!userCaused) return
+        const t = followTarget(c)
+        if (!t) return
+        onUserScroll(Math.abs(c.scrollTop - t.top) > t.line)
+      })
     }
     c.addEventListener('wheel', markInput, { passive: true })
     c.addEventListener('touchmove', markInput, { passive: true })
@@ -137,6 +144,7 @@ export function Transcript({ doc, activeId, follow, onUserScroll, onSeek }: Prop
     window.addEventListener('keydown', onKey)
     c.addEventListener('scroll', onScroll, { passive: true })
     return () => {
+      if (pending) cancelAnimationFrame(pending)
       c.removeEventListener('wheel', markInput)
       c.removeEventListener('touchmove', markInput)
       c.removeEventListener('pointerdown', markInput)

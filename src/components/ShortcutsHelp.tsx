@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { KEYS } from '../lib/platform'
+import { closeOnEscape } from '../lib/keys'
 
 function rows(skip: number): [string, string][] {
   const fine = skip <= 5 ? 1 : 5
@@ -26,7 +27,7 @@ export function ShortcutsHelp({ skipSeconds, onClose }: { skipSeconds: number; o
   return (
     <>
       <div className="backdrop" onClick={onClose} />
-      <div className="panel help" role="dialog" aria-label="快捷键">
+      <div className="panel help" role="dialog" aria-label="快捷键" onKeyDown={closeOnEscape(onClose)}>
         <div className="panel-head">
           <span>快捷键</span>
           <button className="icon-btn sm" onClick={onClose} title="关闭 (Esc)">

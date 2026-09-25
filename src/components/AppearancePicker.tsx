@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { ACCENTS, CUSTOM_ID, accentColor, accentFor, normalizeHex } from '../lib/accents'
 import { FONTS, isFontAvailable } from '../lib/fonts'
 import { resolveTheme, useSettings } from '../store/settings'
+import { closeOnEscape } from '../lib/keys'
 
 export type PickerTab = 'accent' | 'font'
 
@@ -39,7 +40,7 @@ export function AppearancePicker({ tab, onTab, onBack, onClose }: Props) {
   return (
     <>
       <div className="backdrop" onClick={onClose} />
-      <div className="panel picker" role="dialog" aria-label="强调色与字体">
+      <div className="panel picker" role="dialog" aria-label="强调色与字体" onKeyDown={closeOnEscape(onClose)}>
         <div className="panel-head">
           <button className="link back" onClick={onBack}>
             <ArrowLeft size={14} />
@@ -62,7 +63,7 @@ export function AppearancePicker({ tab, onTab, onBack, onClose }: Props) {
           <div className="picker-body">
             <div className="accent-grid">
               {ACCENTS.map((a) => (
-                <button key={a.id} className={`accent-cell ${accent === a.id ? 'on' : ''}`} onClick={() => update({ accent: a.id })} title={a.name}>
+                <button key={a.id} className={`accent-cell ${accent === a.id ? 'on' : ''}`} onClick={() => update({ accent: a.id })} title={a.name} aria-pressed={accent === a.id}>
                   <i style={{ background: accentColor(a, dark) }}>{accent === a.id && <Check size={14} strokeWidth={3} />}</i>
                   <span>{a.name}</span>
                 </button>
@@ -89,7 +90,7 @@ export function AppearancePicker({ tab, onTab, onBack, onClose }: Props) {
                   onBlur={commitHex}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') commitHex()
-                    e.stopPropagation()
+                    if (e.key !== 'Escape') e.stopPropagation()
                   }}
                   aria-label="十六进制颜色值"
                 />
@@ -103,7 +104,7 @@ export function AppearancePicker({ tab, onTab, onBack, onClose }: Props) {
           <div className="picker-body">
             <div className="font-list">
               {fonts.map((f) => (
-                <button key={f.id} className={`font-cell ${font === f.id ? 'on' : ''}`} onClick={() => update({ font: f.id })}>
+                <button key={f.id} className={`font-cell ${font === f.id ? 'on' : ''}`} onClick={() => update({ font: f.id })} aria-pressed={font === f.id}>
                   <span className="font-name">{f.name}</span>
                   <span className="font-sample" style={{ fontFamily: f.stack }}>
                     {SAMPLE}

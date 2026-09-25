@@ -19,8 +19,9 @@ export interface PeaksResult {
 }
 
 /** Computes normalized waveform peaks (0..1) for drawing. Returns null when decoding is not possible. */
-export async function computePeaks(blob: Blob, bins = 2400): Promise<PeaksResult | null> {
-  if (blob.size > MAX_DECODE_BYTES) return null
+export async function computePeaks(blob: Blob, bins = 2400, durationHint = 0): Promise<PeaksResult | null> {
+  // decodeAudioData first expands to float PCM at the native rate: roughly 350 MB per hour of stereo 44.1 kHz.
+  if (blob.size > MAX_DECODE_BYTES || durationHint > 4 * 3600) return null
   const buf = await blob.arrayBuffer()
   const audio = await decodeLowRate(buf)
   if (!audio) return null

@@ -3,6 +3,12 @@ import { fmtTime } from '../lib/format'
 import { usePlayer } from '../store/player'
 import { useSettings } from '../store/settings'
 
+interface Colours {
+  muted: string
+  accent: string
+  fg: string
+}
+
 interface Props {
   peaks: Float32Array | null
   slim?: boolean
@@ -16,11 +22,19 @@ export function Waveform({ peaks, slim = false, onSeek }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const duration = usePlayer((s) => s.duration)
-  const currentTime = usePlayer((s) => s.currentTime)
-  // Colours are read from CSS variables at draw time, so redraw when theme or accent change.
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  // Subscribe to the progress bar index rather than the raw clock: the canvas only changes when
+  // the coloured edge moves by a bar, not 60 times a second.
+  const barCount = Math.max(1, Math.floor((size.w + GAP) / (BAR + GAP)))
+  const progressBars = usePlayer((s) => (s.duration > 0 ? Math.min(barCount, Math.floor((s.currentTime / s.duration) * barCount)) : 0))
+  // Colours are read from CSS variables, which change with theme or accent.
   const accent = useSettings((s) => s.accent)
   const theme = useSettings((s) => s.theme)
-  const [size, setSize] = useState({ w: 0, h: 0 })
+  const customAccent = useSettings((s) => s.customAccent)
+  const colours = useRef<Colours | null>(null)
+  useEffect(() => {
+    colours.current = null
+  }, [accent, theme, customAccent])
   const [hover, setHover] = useState<number | null>(null)
   const dragging = useRef(false)
   const lastSeek = useRef(0)
@@ -49,24 +63,28 @@ export function Waveform({ peaks, slim = false, onSeek }: Props) {
     if (!ctx) return
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, size.w, size.h)
-    const cs = getComputedStyle(wrap)
-    const muted = cs.getPropertyValue('--wave').trim() || '#999'
-    const accent = cs.getPropertyValue('--accent').trim() || '#c8551f'
-    const fg = cs.getPropertyValue('--fg').trim() || '#000'
-    const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0
+    if (!colours.current) {
+      const cs = getComputedStyle(wrap)
+      colours.current = {
+        muted: cs.getPropertyValue('--wave').trim() || '#999',
+        accent: cs.getPropertyValue('--accent').trim() || '#c8551f',
+        fg: cs.getPropertyValue('--fg').trim() || '#000',
+      }
+    }
+    const { muted, accent: accentColour, fg } = colours.current
     const { w, h } = size
-    const count = Math.max(1, Math.floor((w + GAP) / (BAR + GAP)))
+    const count = barCount
     const mid = h / 2
     if (peaks && peaks.length) {
       for (let i = 0; i < count; i++) {
-        const c = Math.floor(((i + 0.5) / count) * peaks.length)
-        const a = Math.max(0, c - 1)
-        const b = Math.min(peaks.length, c + 2)
+        // Average every peak bin that falls inside this bar, so resizing does not make bars jitter.
+        const a = Math.floor((i / count) * peaks.length)
+        const b = Math.max(a + 1, Math.floor(((i + 1) / count) * peaks.length))
         let sum = 0
         for (let j = a; j < b; j++) sum += peaks[j]
         const bh = Math.max(2, (sum / (b - a)) * (h - 6))
         const x = i * (BAR + GAP)
-        ctx.fillStyle = (i + 0.5) / count <= progress ? accent : muted
+        ctx.fillStyle = i < progressBars ? accentColour : muted
         ctx.beginPath()
         ctx.roundRect(x, mid - bh / 2, BAR, bh, 1)
         ctx.fill()
@@ -74,8 +92,8 @@ export function Waveform({ peaks, slim = false, onSeek }: Props) {
     } else {
       ctx.fillStyle = muted
       ctx.fillRect(0, mid - 1, w, 2)
-      ctx.fillStyle = accent
-      ctx.fillRect(0, mid - 1, w * progress, 2)
+      ctx.fillStyle = accentColour
+      ctx.fillRect(0, mid - 1, (w * progressBars) / count, 2)
     }
     if (hover != null) {
       ctx.fillStyle = fg
@@ -83,7 +101,7 @@ export function Waveform({ peaks, slim = false, onSeek }: Props) {
       ctx.fillRect(Math.round(hover * w), 2, 1, h - 4)
       ctx.globalAlpha = 1
     }
-  }, [peaks, size, duration, currentTime, hover, accent, theme])
+  }, [peaks, size, barCount, progressBars, hover, accent, theme, customAccent])
 
   const fracFromEvent = (e: PointerEvent) => {
     const rect = wrapRef.current!.getBoundingClientRect()

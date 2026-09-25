@@ -10,8 +10,9 @@ const SERIF_FALLBACK = '"Songti SC", "Noto Serif CJK SC", "Noto Serif SC", "SimS
 const SANS_FALLBACK = '"PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif'
 
 export const FONTS: FontOption[] = [
-  { id: 'serif', name: '宋体', probe: 'Songti SC', stack: SERIF_FALLBACK },
-  { id: 'sans', name: '苹方', probe: 'PingFang SC', stack: SANS_FALLBACK },
+  // The two base stacks always resolve to something usable, so they are never hidden.
+  { id: 'serif', name: '宋体', probe: null, stack: SERIF_FALLBACK },
+  { id: 'sans', name: '黑体', probe: null, stack: SANS_FALLBACK },
   { id: 'kai', name: '楷体', probe: 'Kaiti SC', stack: `"Kaiti SC", "STKaiti", "KaiTi", "AR PL UKai CN", ${SERIF_FALLBACK}` },
   { id: 'fangsong', name: '仿宋', probe: 'STFangsong', stack: `"STFangsong", "FangSong", "FangSong_GB2312", ${SERIF_FALLBACK}` },
   { id: 'heiti', name: '华文黑体', probe: ['Heiti SC', 'STHeiti'], stack: `"Heiti SC", "STHeiti", "SimHei", ${SANS_FALLBACK}` },
@@ -32,14 +33,14 @@ export const FONTS: FontOption[] = [
   { id: 'notoserif', name: '思源宋体', probe: ['Noto Serif CJK SC', 'Noto Serif SC', 'Source Han Serif SC'], stack: `"Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", ${SERIF_FALLBACK}` },
   { id: 'notosans', name: '思源黑体', probe: ['Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC'], stack: `"Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", ${SANS_FALLBACK}` },
   { id: 'georgia', name: 'Georgia · 宋', probe: 'Georgia', stack: `Georgia, ${SERIF_FALLBACK}` },
-  { id: 'palatino', name: 'Palatino · 宋', probe: 'Palatino', stack: `Palatino, "Palatino Linotype", ${SERIF_FALLBACK}` },
+  { id: 'palatino', name: 'Palatino · 宋', probe: ['Palatino', 'Palatino Linotype', 'Book Antiqua'], stack: `Palatino, "Palatino Linotype", "Book Antiqua", ${SERIF_FALLBACK}` },
   { id: 'charter', name: 'Charter · 宋', probe: 'Charter', stack: `Charter, ${SERIF_FALLBACK}` },
   { id: 'iowan', name: 'Iowan Old Style · 宋', probe: 'Iowan Old Style', stack: `"Iowan Old Style", ${SERIF_FALLBACK}` },
   { id: 'baskerville', name: 'Baskerville · 宋', probe: 'Baskerville', stack: `Baskerville, ${SERIF_FALLBACK}` },
   { id: 'uiserif', name: '系统衬线 · 宋', probe: null, stack: `ui-serif, ${SERIF_FALLBACK}` },
-  { id: 'helvetica', name: 'Helvetica · 苹方', probe: 'Helvetica Neue', stack: `"Helvetica Neue", Helvetica, ${SANS_FALLBACK}` },
-  { id: 'avenir', name: 'Avenir · 苹方', probe: 'Avenir Next', stack: `"Avenir Next", Avenir, ${SANS_FALLBACK}` },
-  { id: 'menlo', name: 'Menlo 等宽 · 苹方', probe: 'Menlo', stack: `Menlo, ${SANS_FALLBACK}` },
+  { id: 'helvetica', name: 'Helvetica · 黑', probe: ['Helvetica Neue', 'Helvetica', 'Arial'], stack: `"Helvetica Neue", Helvetica, Arial, ${SANS_FALLBACK}` },
+  { id: 'avenir', name: 'Avenir · 黑', probe: ['Avenir Next', 'Avenir'], stack: `"Avenir Next", Avenir, ${SANS_FALLBACK}` },
+  { id: 'menlo', name: '等宽 · 黑', probe: ['Menlo', 'Consolas', 'DejaVu Sans Mono'], stack: `Menlo, Consolas, "DejaVu Sans Mono", ${SANS_FALLBACK}` },
   { id: 'dinglie', name: '鼎猎宋刻体', probe: ['鼎猎宋刻体', 'dingliesongtypeface'], stack: `"鼎猎宋刻体", "dingliesongtypeface", ${SERIF_FALLBACK}` },
   { id: 'jinghao', name: '静好如歌', probe: ['静好如歌', 'SYJHRG'], stack: `"静好如歌", "SYJHRG", "Kaiti SC", ${SERIF_FALLBACK}` },
 ]

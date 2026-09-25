@@ -38,6 +38,11 @@ export function Reader() {
   const activeDoc = doc
   const index = useMemo(() => buildActiveIndex(activeDoc), [activeDoc])
   const activeId = usePlayer((p) => findActive(index, p.currentTime + offset))
+  // Navigation callbacks read the current sentence through a ref so the key listener is registered once.
+  const activeIdRef = useRef(activeId)
+  useEffect(() => {
+    activeIdRef.current = activeId
+  }, [activeId])
 
   const audioRef = useRef<HTMLAudioElement>(null)
   const attach = usePlayer((p) => p.attach)
@@ -133,13 +138,14 @@ export function Reader() {
       seek(session.position)
       showToast(`从 ${fmtTime(session.position)} 继续`)
     }
-    if (dur) void savePosition(usePlayer.getState().currentTime, dur)
+    if (dur) void savePosition(audioRef.current?.currentTime ?? 0, dur)
   }, [ready, session, seek, showToast, savePosition])
 
   useEffect(() => {
+    // Read the element itself: the store clock may lag while the tab is hidden.
     const save = () => {
       const p = usePlayer.getState()
-      if (p.el && p.duration) savePosition(p.currentTime, p.duration)
+      if (p.el && p.duration) savePosition(p.el.currentTime, p.duration)
     }
     const timer = window.setInterval(save, 5000)
     const onVisibility = () => document.visibilityState === 'hidden' && save()
@@ -155,7 +161,7 @@ export function Reader() {
   const goSentence = useCallback(
     (dir: -1 | 1) => {
       if (!index.starts.length) return
-      const pos = indexOfId(index, activeId)
+      const pos = indexOfId(index, activeIdRef.current)
       const cur = usePlayer.getState().currentTime + offset
       let next: number
       if (dir < 0) {
@@ -166,7 +172,7 @@ export function Reader() {
       }
       seekAndFollow(Math.max(0, index.starts[next] - offset + 0.02))
     },
-    [index, activeId, offset, seekAndFollow],
+    [index, offset, seekAndFollow],
   )
 
   // Paragraph navigation: ⌥↑ goes to the start of this paragraph (or the previous one when
@@ -176,7 +182,8 @@ export function Reader() {
       const d = activeDoc
       if (!d || !d.paragraphs.length) return
       const cur = usePlayer.getState().currentTime + offset
-      const curPid = activeId >= 0 ? d.sentences[activeId].para : -1
+      const activeNow = activeIdRef.current
+      const curPid = activeNow >= 0 ? d.sentences[activeNow].para : -1
       const hasText = (pid: number) => d.paragraphs[pid] && d.paragraphs[pid].to > d.paragraphs[pid].from
       let target = -1
       if (dir > 0) {
@@ -202,7 +209,7 @@ export function Reader() {
       if (target < 0) return
       seekAndFollow(Math.max(0, d.paragraphs[target].start - offset + 0.02))
     },
-    [activeDoc, activeId, offset, seekAndFollow],
+    [activeDoc, offset, seekAndFollow],
   )
 
   // Touch gestures on the reading area: swipe left/right to skip, double-tap to play/pause,
@@ -219,6 +226,11 @@ export function Reader() {
       }
       const t = e.touches[0]
       const target = e.target as HTMLElement | null
+      // Sliders, popups and inputs have their own touch behaviour.
+      if (target?.closest('.panel, .speed-pop, input, textarea, .immersive-exit')) {
+        start = null
+        return
+      }
       start = { x: t.clientX, y: t.clientY, t: performance.now(), onPlayer: !!target?.closest('.player') }
     }
     const onEnd = (e: TouchEvent) => {
@@ -260,7 +272,7 @@ export function Reader() {
   const leave = useCallback(async () => {
     const p = usePlayer.getState()
     p.pause()
-    if (p.el && p.duration) await savePosition(p.currentTime, p.duration)
+    if (p.el && p.duration) await savePosition(p.el.currentTime, p.duration)
     close()
   }, [savePosition, close])
 
@@ -280,6 +292,8 @@ export function Reader() {
         return
       }
       const p = usePlayer.getState()
+      // Holding a key repeats only the seek and size/speed steps, not the toggles.
+      if (e.repeat && !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '-', '=', '+', '[', ']', '{', '}'].includes(e.key)) return
       switch (e.key) {
         case ' ':
           if (tag === 'BUTTON') return

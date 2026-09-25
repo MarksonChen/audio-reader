@@ -91,7 +91,7 @@ function softSplit(chars: string[], from: number, to: number): [number, number][
 }
 
 export function segmentTranscript(input: string): Segmented {
-  const text = input.replace(/^﻿/, '').replace(/\r\n?/g, '\n')
+  const text = input.normalize('NFC').replace(/^﻿/, '').replace(/\r\n?/g, '\n')
   const chars: string[] = []
   const paragraphs: SegParagraph[] = []
   const sentences: SegSentence[] = []

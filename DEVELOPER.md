@@ -57,14 +57,15 @@ uv run scripts/align.py --help
 - 它调用 [stable-ts](https://github.com/jianfch/stable-ts) 的 `align()`：不做识别，只回答“文字里的每个词在第几毫秒说出”。
   文字与音频有出入时（原稿多几个字、少几个字）会被跳过或压缩，不会整体错位。
 - 字幕作为来源时，先剥掉序号与时间戳，把各条文字重新连成整段，让对齐器自己按标点分段
-  （ASR 字幕常在句中硬切行，按行分段会让对齐质量明显变差：示例里零时长词从 783 降到 216）。
+  （ASR 字幕常在句中硬切行，按行分段会让对齐质量明显变差：示例里零时长词从 783 降到两百多）。
   原稿作为来源时按行分段。
 - 输出的 `.words.srt` 每个词一条；网页会按“每条只有一两个词、时长很短”自动识别为逐词字幕，进入逐字模式。
   网页另外也接受词级 JSON（兼容 whisper / stable-ts 的 `segments[].words[]` 结构）。
 - 模型默认 `small`。在示例音频上，`medium` 慢 3 倍多、零时长词反而更多，与 `small` 的词起点中位数只差 80 毫秒，
   对照 ASR 边界与音频能量起点都没有更准，所以不必升级模型。small 的时间戳相对真实发声整体晚约 50 到 100 毫秒，
   需要的话在设置里把「高亮偏移」调到 +0.10 秒。
-- 30 分钟音频在 M4 Pro 上约 45 到 70 秒；首次运行 uv 会创建环境并下载模型（small 约 460 MB）。
+- 需要 ffmpeg 在 PATH 上（whisper 用它读音频）。30 分钟音频在 M4 Pro 上约 45 到 70 秒；首次运行 uv 会创建环境并下载模型（small 约 460 MB）。
+- 字幕来源支持 SRT / VTT / SBV / LRC；文本编码按 UTF-16（含无 BOM）、UTF-8、GB18030 的顺序识别。
 
 > 若系统里有 conda 的 Python 被选中，torch 可能报 `OMP: Error #15`（两份 OpenMP 运行时）。
 > 加 `UV_PYTHON_PREFERENCE=only-managed` 让 uv 使用自管的解释器即可。
@@ -78,5 +79,5 @@ uv run scripts/align.py --help
 ## 调试
 
 - URL 加 `&debug=1`（如 `/?demo&debug=1`）显示一个面板，逐帧测量正在读的字与邻字的字形位置，用于排查高亮渲染问题。
-- 浏览器实测用 Playwright 驱动本机 Chrome（`channel: 'chrome'`）；Safari 引擎可用一个基于 WKWebView 的
-  Swift 小程序离屏加载页面、执行 JS 并截图，不依赖 Playwright 的 WebKit 下载。
+- 浏览器实测可用 Playwright 驱动本机 Chrome（`channel: 'chrome'`）；Safari 引擎可用一个基于 WKWebView 的
+  Swift 小程序离屏加载页面、执行 JS 并截图（这些脚本不在仓库里）。

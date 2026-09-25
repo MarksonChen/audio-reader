@@ -154,7 +154,7 @@ button:disabled {
   border: 2px dashed var(--accent);
   border-radius: 22px;
   pointer-events: none;
-  background: rgba(200, 85, 31, 0.04);
+  background: var(--accent-soft);
   z-index: 40;
 }
 .home-inner {
@@ -468,7 +468,7 @@ button:disabled {
   font-size: 12px;
   font-weight: 600;
   background: var(--danger);
-  color: #fff;
+  color: var(--bg);
 }
 .recent-meta {
   font-size: 12px;
@@ -632,6 +632,7 @@ button:disabled {
   overscroll-behavior: contain;
   position: relative;
   scrollbar-gutter: stable;
+  touch-action: manipulation;
 }
 .doc {
   max-width: var(--measure, 42rem);
@@ -834,9 +835,6 @@ h3.para .ts {
 }
 .wave.slim {
   height: 22px;
-}
-.wave-empty {
-  cursor: pointer;
 }
 .wave-tip {
   position: absolute;
@@ -1049,13 +1047,6 @@ h3.para .ts {
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-}
-.slider-row .value {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  color: var(--fg-2);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 .range::-webkit-slider-runnable-track {
   height: 4px;
@@ -1345,12 +1336,6 @@ h3.para .ts {
   margin-right: -8px;
   padding: 4px 8px 4px 0;
 }
-.picker-note {
-  margin: 4px 0 12px;
-  font-size: 12.5px;
-  color: var(--muted);
-  line-height: 1.5;
-}
 .accent-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -1502,22 +1487,12 @@ h3.para .ts {
 .font-cell.on {
   background: var(--accent-soft);
 }
-.font-cell.missing {
-  opacity: 0.45;
-}
 .font-name {
   font-size: 12px;
   color: var(--muted);
   display: flex;
   gap: 6px;
   align-items: center;
-}
-.font-name em {
-  font-style: normal;
-  font-size: 10.5px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--surface-2);
 }
 .font-sample {
   font-size: 17px;
@@ -1559,33 +1534,6 @@ h3.para .ts {
 }
 .row .seg.icons button.on span {
   display: inline;
-}
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.stepper button {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  color: var(--fg-2);
-}
-.stepper button:hover {
-  background: var(--surface-2);
-  color: var(--fg);
-}
-.stepper span {
-  min-width: 34px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
-.stepper span.wide {
-  min-width: 64px;
 }
 .switch {
   width: 40px;
@@ -1631,21 +1579,6 @@ h3.para .ts {
 .link:hover {
   color: var(--accent);
 }
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  max-width: calc(100vw - 32px);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  z-index: 21;
-  padding: 8px 20px 18px;
-  animation: fade 0.16s ease-out;
-}
 .keys {
   width: 100%;
   border-collapse: collapse;
@@ -1667,12 +1600,6 @@ kbd {
   border-bottom-width: 2px;
   padding: 2px 7px;
   border-radius: 6px;
-}
-.modal-note {
-  color: var(--muted);
-  font-size: 12.5px;
-  margin: 14px 0 0;
-  line-height: 1.6;
 }
 .toast {
   position: fixed;
@@ -1715,9 +1642,6 @@ kbd {
   }
   .para {
     text-align: left;
-  }
-  .hdr-sub {
-    display: none;
   }
   .controls {
     grid-template-columns: auto 1fr auto;

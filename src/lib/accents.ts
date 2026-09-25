@@ -88,10 +88,6 @@ function hslToHex(h: number, s: number, l: number): string {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
-/**
- * The colour actually applied for a theme: dark enough to read as text on light backgrounds,
- * bright enough on dark ones, hue preserved.
- */
 /** WCAG relative luminance, 0 (black) to 1 (white). */
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16)
@@ -118,6 +114,10 @@ function readableCustom(hex: string, dark: boolean): string {
   return out
 }
 
+/**
+ * The colour actually applied for a theme: dark enough to read as text on light backgrounds,
+ * bright enough on dark ones, hue preserved.
+ */
 export function accentColor(a: AccentOption, dark: boolean): string {
   if (a.id === CUSTOM_ID) return readableCustom(a.hex, dark)
   const [h, s, l] = hexToHsl(a.hex)

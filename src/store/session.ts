@@ -87,7 +87,7 @@ export const useSession = create<SessionState>()((set, get) => {
       setAudioUrl(URL.createObjectURL(data.audio))
       set({ status: 'reader', session: data, doc })
       if (toast) get().showToast(toast)
-      void computePeaks(data.audio)
+      void computePeaks(data.audio, 2400, data.duration)
         .then((result) => {
           if (seq !== loadSeq || !result) return
           set({ peaks: result.peaks })
@@ -95,7 +95,7 @@ export const useSession = create<SessionState>()((set, get) => {
         })
         .catch(() => undefined)
     } catch (err) {
-      if (seq !== loadSeq) return
+      if (seq !== loadSeq || (err instanceof Error && err.message === 'superseded')) return
       set({ status: 'home', error: err instanceof Error ? err.message : String(err) })
     }
   }
@@ -137,6 +137,7 @@ export const useSession = create<SessionState>()((set, get) => {
     },
 
     openPending: async (pending) => {
+      if (get().status === 'loading') return
       if (!pending.audio) {
         set({ error: '还需要一个音频文件（MP3、M4A、WAV…）。' })
         return
@@ -146,8 +147,16 @@ export const useSession = create<SessionState>()((set, get) => {
         return
       }
       set({ status: 'loading', loadingMessage: '读取文件…', error: null })
-      const subtitleText = await readTextFile(pending.subtitle)
-      const transcriptText = pending.transcript ? await readTextFile(pending.transcript) : null
+      let subtitleText: string
+      let transcriptText: string | null
+      try {
+        subtitleText = await readTextFile(pending.subtitle)
+        transcriptText = pending.transcript ? await readTextFile(pending.transcript) : null
+      } catch (err) {
+        // Typically the file changed on disk after it was picked (NotReadableError).
+        set({ status: 'home', error: `读取文件失败：${err instanceof Error ? err.message : String(err)}，请重新选择。` })
+        return
+      }
       const mime = pending.audio.type || audioMime(pending.audio.name)
       const audioBlob = pending.audio.type ? pending.audio : new Blob([pending.audio], { type: mime })
       const now = Date.now()
@@ -169,10 +178,11 @@ export const useSession = create<SessionState>()((set, get) => {
         transcriptName: pending.transcript?.name ?? null,
       }
       await load(data)
-      if (get().status === 'reader') void persist(data)
+      if (get().session === data) void persist(data)
     },
 
     openDemo: async () => {
+      if (get().status === 'loading') return
       useFlags.getState().dismissDemo()
       const existing = get().recents.find((r) => r.demo)
       if (existing && (existing.demoVersion ?? 1) >= DEMO_VERSION) return get().openStored(existing.id)
@@ -216,7 +226,7 @@ export const useSession = create<SessionState>()((set, get) => {
           transcriptName: `${DEMO_TITLE}.txt`,
         }
         await load(data)
-        if (get().status === 'reader') {
+        if (get().session === data) {
           void persist(data).then(() => {
             if (existing) return get().removeStored(existing.id)
           })
@@ -227,6 +237,7 @@ export const useSession = create<SessionState>()((set, get) => {
     },
 
     openStored: async (id) => {
+      if (get().status === 'loading') return
       set({ status: 'loading', loadingMessage: '读取本地缓存…', error: null })
       const data = await getSession(id).catch(() => undefined)
       if (!data) {

@@ -1,12 +1,24 @@
 import { Minus, Pause, Play, Plus, RotateCcw, RotateCw, SkipBack, SkipForward } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent,
+} from 'react'
 import { fmtTime } from '../lib/format'
 import { KEYS, combo } from '../lib/platform'
 import { RATE_MIN, RATE_STEP, fmtRate, usePlayer } from '../store/player'
-
-const SLIDER_MIN = 0.25
-const SLIDER_MAX = 3
+import { RATE_SLIDER_RANGE } from '../store/settings'
 import { Waveform } from './Waveform'
+
+const SLIDER_MIN = RATE_SLIDER_RANGE.min
+const SLIDER_MAX = RATE_SLIDER_RANGE.max
+/** Wheel distance that counts as one 0.05 step, so a trackpad flick does not jump ten steps. */
+const WHEEL_STEP_PX = 30
 
 interface Props {
   peaks: Float32Array | null
@@ -31,7 +43,7 @@ function TimeLabel() {
 
 const blur = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget.blur()
 
-/** Press-and-hold: fires once, then repeats while the pointer stays down. */
+/** Press-and-hold: fires once, then repeats while the pointer stays down; Enter/Space work too. */
 function useHold(fn: () => void) {
   const timer = useRef(0)
   const stop = () => {
@@ -46,11 +58,17 @@ function useHold(fn: () => void) {
       timer.current = window.setInterval(fn, 70)
     }, 380)
   }
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      fn()
+    }
+  }
   useEffect(() => stop, [])
-  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop, onPointerCancel: stop }
+  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop, onPointerCancel: stop, onKeyDown }
 }
 
-/** Speed pill: click for a popover with 0.05 steps, presets and a typed value; wheel over it to nudge. */
+/** Speed pill: click for a popover with 0.05 steps, a slider and a typed value; wheel over it to nudge. */
 function SpeedControl() {
   const rate = usePlayer((s) => s.rate)
   const setRate = usePlayer((s) => s.setRate)
@@ -92,9 +110,14 @@ function SpeedControl() {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [open])
 
+  const wheelAcc = useRef(0)
   const onWheel = (e: WheelEvent) => {
-    if (e.deltaY === 0) return
-    adjustRate(e.deltaY < 0 ? RATE_STEP : -RATE_STEP)
+    if (e.deltaY === 0 || (e.target as HTMLElement).tagName === 'INPUT') return
+    wheelAcc.current += e.deltaY
+    const steps = Math.trunc(wheelAcc.current / WHEEL_STEP_PX)
+    if (!steps) return
+    wheelAcc.current -= steps * WHEEL_STEP_PX
+    adjustRate(-steps * RATE_STEP)
   }
   const commitDraft = () => {
     if (draft !== null) {
@@ -114,7 +137,7 @@ function SpeedControl() {
           <div className="backdrop clear" onClick={() => setOpen(false)} />
           <div ref={popRef} className="speed-pop" role="dialog" aria-label="播放速度" onWheel={onWheel}>
             <div className="speed-row">
-              <button className="speed-step" title="−0.05（按住连续）" {...dec}>
+              <button className="speed-step" title="−0.05（按住连续）" aria-label="减慢 0.05" {...dec}>
                 <Minus size={16} />
               </button>
               <label className="speed-value">
@@ -127,16 +150,14 @@ function SpeedControl() {
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={commitDraft}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      commitDraft()
-                      ;(e.target as HTMLInputElement).blur()
-                    }
+                    // Blurring commits through onBlur; committing here as well would apply the value twice.
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                     e.stopPropagation()
                   }}
                 />
                 <span>×</span>
               </label>
-              <button className="speed-step" title="+0.05（按住连续）" {...inc}>
+              <button className="speed-step" title="+0.05（按住连续）" aria-label="加快 0.05" {...inc}>
                 <Plus size={16} />
               </button>
             </div>

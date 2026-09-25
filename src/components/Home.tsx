@@ -62,7 +62,19 @@ function RecentCard({ meta, onOpen, onRemove }: { meta: SessionMeta; onOpen: () 
   }, [confirm])
   const progress = meta.duration ? Math.min(1, meta.position / meta.duration) : 0
   return (
-    <div className="recent" onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onOpen()}>
+    <div
+      className="recent"
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return // the delete button handles its own keys
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+    >
       <div className="recent-top">
         <div className="recent-title" title={meta.title}>
           {meta.title}
@@ -74,7 +86,9 @@ function RecentCard({ meta, onOpen, onRemove }: { meta: SessionMeta; onOpen: () 
             if (confirm) onRemove()
             else setConfirm(true)
           }}
+          onKeyDown={(e) => e.stopPropagation()}
           title="删除本地缓存"
+          aria-label={confirm ? '确认删除' : '删除本地缓存'}
         >
           {confirm ? '确认删除' : <Trash size={14} />}
         </button>
@@ -113,11 +127,12 @@ export function Home() {
 
   const handleFiles = useCallback(
     async (list: FileList | File[]) => {
-      const { pending: next, rejected } = await addFiles(Array.from(list), pending)
-      setPending(next)
+      // Classify first, then merge into whatever is pending by then, so two quick drops cannot overwrite each other.
+      const { pending: found, rejected } = await addFiles(Array.from(list), {})
+      setPending((prev) => ({ ...prev, ...found }))
       setError(rejected.length ? `无法识别这些文件：${rejected.join('、')}` : null)
     },
-    [addFiles, pending, setError],
+    [addFiles, setError],
   )
 
   const onDrop = (e: DragEvent) => {
@@ -134,6 +149,7 @@ export function Home() {
       className={`home ${drag ? 'dragging' : ''} ${recents.length ? '' : 'centered'}`}
       onDragEnter={(e) => {
         e.preventDefault()
+        if (!e.dataTransfer.types.includes('Files')) return
         dragDepth.current++
         setDrag(true)
       }}

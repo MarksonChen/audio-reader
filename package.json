@@ -2,6 +2,16 @@
   "name": "audio-reader",
   "private": true,
   "version": "0.3.1",
+  "description": "边听边读：音频跟着字幕和原稿逐句高亮、逐字点亮、自动滚动的网页阅读器",
+  "license": "MIT",
+  "homepage": "https://marksonchen.github.io/audio-reader/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarksonChen/audio-reader.git"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,11 +36,5 @@
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
-  },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/MarksonChen/audio-reader.git"
-  },
-  "homepage": "https://marksonchen.github.io/audio-reader/"
+  }
 }

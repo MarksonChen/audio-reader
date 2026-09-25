@@ -4,7 +4,6 @@ import { useSettings } from './settings'
 /** Playback speed: any multiple of 0.05 from 0.05 upward; the browser may refuse extremes. */
 export const RATE_MIN = 0.05
 export const RATE_STEP = 0.05
-export const RATE_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3]
 
 export function snapRate(r: number): number {
   if (!Number.isFinite(r)) return 1
@@ -79,9 +78,9 @@ export const usePlayer = create<PlayerState>()((set, get) => {
         const own = Number.isFinite(el.duration) ? el.duration : 0
         set({ duration: hint > 0 && Math.abs(own - hint) > 1 ? hint : own, ready: true })
       }
-      const onTime = () => {
-        if (!get().playing) set({ currentTime: el.currentTime })
-      }
+      // timeupdate keeps the clock moving when the tab is hidden and rAF is paused; while visible the
+      // rAF loop simply overwrites it more often.
+      const onTime = () => set({ currentTime: el.currentTime })
       const onRate = () => set({ rate: el.playbackRate })
       el.addEventListener('play', onPlay)
       el.addEventListener('pause', onPause)

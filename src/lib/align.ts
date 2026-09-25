@@ -28,8 +28,13 @@ interface Stream {
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
-function isAsciiWord(ch: string | undefined): boolean {
-  return !!ch && /[A-Za-z0-9]/.test(ch)
+const WIDE_RE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\u3000-\u303f\uff00-\uffef]/u
+
+/** Text in scripts that use spaces needs one when two cues are glued together. */
+function needsSpace(prev: string | undefined, next: string | undefined): boolean {
+  if (!prev || !next) return false
+  if (/\s/.test(prev) || /\s/.test(next)) return false
+  return !WIDE_RE.test(prev) && !WIDE_RE.test(next)
 }
 
 /**
@@ -40,7 +45,7 @@ function isAsciiWord(ch: string | undefined): boolean {
  */
 export function buildSubtitleStream(cues: Cue[], precise = false): Stream {
   const items = cues
-    .map((c) => ({ start: c.start, end: c.end, chars: Array.from(c.text.replace(/\s+/g, ' ').trim()) }))
+    .map((c) => ({ start: c.start, end: c.end, chars: Array.from(c.text.normalize('NFC').replace(/\s+/g, ' ').trim()) }))
     .filter((c) => c.chars.length > 0)
   let totalChars = 0
   let totalSpan = 0
@@ -67,7 +72,7 @@ export function buildSubtitleStream(cues: Cue[], precise = false): Stream {
       effEnd = Math.max(c.end, natural)
       if (i + 1 < items.length) effEnd = Math.min(effEnd, Math.max(items[i + 1].start, c.start + 0.2))
     }
-    if (chars.length && isAsciiWord(chars[chars.length - 1]) && isAsciiWord(c.chars[0])) {
+    if (chars.length && needsSpace(chars[chars.length - 1], c.chars[0])) {
       chars.push(' ')
       times.push(c.start)
       cueIdx.push(i)
@@ -109,13 +114,14 @@ function interpolate(anchor: Float64Array, rate: number, duration?: number): Flo
   }
   for (let k = prev + 1; k < n; k++) {
     let t = out[prev] + (k - prev) / rate
-    if (duration && duration > 0) t = Math.min(t, duration)
+    // Never clamp below the last anchor: subtitles may run past the reported audio length.
+    if (duration && duration > 0) t = Math.min(t, Math.max(duration, out[prev]))
     out[k] = t
   }
   return out
 }
 
-/** Every character gets the cue of its nearest anchored neighbour (earlier one preferred). */
+/** Every character gets the cue of the previous anchored character, or the next one before the first anchor. */
 function fillCues(anchorCue: Int32Array): Int32Array {
   const n = anchorCue.length
   const out = new Int32Array(n)
@@ -191,15 +197,11 @@ function buildDoc(
     id,
     kind: p.kind,
     level: p.level,
-    from: 0,
-    to: 0,
+    from: -1,
+    to: -1,
     start: 0,
     end: 0,
   }))
-  for (const p of paragraphs) {
-    p.from = -1
-    p.to = -1
-  }
   for (const s of sentences) {
     const p = paragraphs[s.para]
     if (p.from < 0) p.from = s.id
@@ -207,6 +209,7 @@ function buildDoc(
   }
   for (const p of paragraphs) {
     if (p.from < 0) {
+      // Segmentation guarantees at least one sentence per paragraph; keep a safe range anyway.
       p.from = p.to = 0
       continue
     }
@@ -241,7 +244,8 @@ export function alignTranscript(transcript: string, cues: Cue[], opts: AlignOpti
   const anchorCue = new Int32Array(seg.chars.length).fill(-1)
   if (nt.norm.length && ns.norm.length) {
     const dmp = new DiffMatchPatch()
-    dmp.Diff_Timeout = opts.timeoutSec ?? 30
+    // An unrelated transcript would otherwise burn the whole timeout before the caller falls back.
+    dmp.Diff_Timeout = opts.timeoutSec ?? 5
     const diffs = dmp.diff_main(nt.norm, ns.norm, false)
     let it = 0
     let is = 0
@@ -275,11 +279,11 @@ export function docFromSubtitles(cues: Cue[], opts: AlignOptions = {}): AlignedD
     const text = cues[i].text.replace(/\s+/g, ' ').trim()
     if (!text) continue
     const prev = parts.length ? parts[parts.length - 1] : ''
-    const joiner = prev && prev !== '\n' && isAsciiWord(prev[prev.length - 1]) && isAsciiWord(text[0]) ? ' ' : ''
+    const joiner = prev && prev !== '\n' && needsSpace(prev[prev.length - 1], text[0]) ? ' ' : ''
     parts.push(joiner + text)
     paraLen += text.length
     const gap = i + 1 < cues.length ? cues[i + 1].start - cues[i].end : 0
-    const endsSentence = /[。！？!?…][”’」』）)"']*$/.test(text)
+    const endsSentence = /[。！？!?…]["”’」』）)']*$/.test(text) || /[A-Za-z0-9)"”’][.][”’"')]*$/.test(text)
     if ((endsSentence && (gap >= 1.2 || paraLen >= 200)) || paraLen >= 320) {
       parts.push('\n')
       paraLen = 0

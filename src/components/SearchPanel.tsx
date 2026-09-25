@@ -19,27 +19,40 @@ interface Hit {
 
 const MAX_HITS = 300
 
+interface Prepared {
+  s: Sentence
+  lower: string
+  norm: string
+  /** For every UTF-16 unit of `norm`, the code-point index in `s.chars`. */
+  map: number[]
+}
+
+/** Lower-cased and punctuation-free forms of every sentence, computed once per document. */
+function prepare(doc: AlignedDoc): Prepared[] {
+  return doc.sentences.map((s) => {
+    const map: number[] = []
+    let norm = ''
+    s.chars.forEach((ch, i) => {
+      const n = normalizeChar(ch)
+      for (let k = 0; k < n.length; k++) map.push(i)
+      norm += n
+    })
+    return { s, lower: s.text.toLowerCase(), norm, map }
+  })
+}
+
 /** Case-insensitive search that also ignores punctuation and spaces, so "神经 科学" finds "神经科学"。 */
-function findHits(doc: AlignedDoc, query: string): Hit[] {
+function findHits(prepared: Prepared[], query: string): Hit[] {
   const q = query.trim().toLowerCase()
   if (!q) return []
   const qNorm = Array.from(q).map(normalizeChar).join('')
   const hits: Hit[] = []
-  for (const s of doc.sentences) {
-    const lower = s.text.toLowerCase()
+  for (const { s, lower, norm, map } of prepared) {
     const direct = lower.indexOf(q)
     if (direct >= 0) {
       const from = Array.from(lower.slice(0, direct)).length
       hits.push({ s, from, to: from + Array.from(q).length })
     } else if (qNorm) {
-      // Map normalized characters back to code-point positions.
-      const map: number[] = []
-      let norm = ''
-      s.chars.forEach((ch, i) => {
-        const n = normalizeChar(ch)
-        for (let k = 0; k < n.length; k++) map.push(i)
-        norm += n
-      })
       const at = norm.indexOf(qNorm)
       if (at >= 0) hits.push({ s, from: map[at], to: map[at + qNorm.length - 1] + 1 })
     }
@@ -69,7 +82,9 @@ export function SearchPanel({ doc, onJump, onClose }: Props) {
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const hits = useMemo(() => findHits(doc, query), [doc, query])
+  const prepared = useMemo(() => prepare(doc), [doc])
+  const hits = useMemo(() => findHits(prepared, query), [prepared, query])
+  const lastPointer = useRef({ x: -1, y: -1 })
   const current = Math.min(cursor, Math.max(0, hits.length - 1))
 
   useEffect(() => {
@@ -124,7 +139,12 @@ export function SearchPanel({ doc, onJump, onClose }: Props) {
             <button
               key={h.s.id}
               className={`hit ${i === current ? 'on' : ''}`}
-              onMouseEnter={() => setCursor(i)}
+              onMouseMove={(e) => {
+                // Only a real pointer movement selects a row; scrolling the list under a still mouse does not.
+                if (e.clientX === lastPointer.current.x && e.clientY === lastPointer.current.y) return
+                lastPointer.current = { x: e.clientX, y: e.clientY }
+                setCursor(i)
+              }}
               onClick={() => {
                 setCursor(i)
                 onJump(h.s)

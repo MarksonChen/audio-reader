@@ -1,6 +1,6 @@
 import type { Cue } from './types'
 
-export type SubtitleKind = 'srt' | 'vtt' | 'lrc' | 'words'
+export type SubtitleKind = 'srt' | 'vtt' | 'sbv' | 'lrc' | 'words'
 
 export interface ParsedSubtitles {
   cues: Cue[]
@@ -10,6 +10,9 @@ export interface ParsedSubtitles {
 }
 
 const TIME_RE = /(?:(\d{1,2}):)?(\d{1,2}):(\d{1,2})[,.](\d{1,3})/
+/** YouTube SBV timing line: `0:00:00.000,0:00:05.000`. */
+const SBV_LINE = /^\s*\d{1,2}:\d{2}:\d{2}\.\d{1,3}\s*,\s*\d{1,2}:\d{2}:\d{2}\.\d{1,3}\s*$/
+const CJK_RE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu
 
 function parseTime(s: string): number | null {
   const m = TIME_RE.exec(s)
@@ -21,7 +24,8 @@ function parseTime(s: string): number | null {
 
 function cleanCueText(raw: string): string {
   return raw
-    .replace(/<[^>]+>/g, '')
+    .replace(/<\/?[a-zA-Z][^>]*>|<\d[^>]*>/g, '') // tags and inline timestamps, not "a < b"
+
     .replace(/\{\\[^}]*\}/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -37,9 +41,9 @@ function parseSrtLike(text: string): Cue[] {
   const blocks = text.split(/\n[ \t]*\n+/)
   for (const block of blocks) {
     const lines = block.split('\n')
-    const ti = lines.findIndex((l) => l.includes('-->'))
+    const ti = lines.findIndex((l) => l.includes('-->') || SBV_LINE.test(l))
     if (ti < 0) continue
-    const [a, b] = lines[ti].split('-->')
+    const [a, b] = lines[ti].includes('-->') ? lines[ti].split('-->') : lines[ti].split(',')
     const start = parseTime(a)
     const end = parseTime(b)
     if (start == null || end == null) continue
@@ -52,16 +56,20 @@ function parseSrtLike(text: string): Cue[] {
 
 function parseLrc(text: string): Cue[] {
   const stamped: { start: number; text: string }[] = []
-  const tag = /\[(\d{1,2}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g
+  // [mm:ss.xx], [mmm:ss.xx] and [hh:mm:ss.xx]; enhanced-LRC inline <mm:ss.xx> tags are dropped.
+  const tag = /\[(?:(\d{1,2}):)?(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g
   for (const line of text.split('\n')) {
     const times: number[] = []
     let m: RegExpExecArray | null
     tag.lastIndex = 0
     while ((m = tag.exec(line))) {
-      const frac = m[3] ? Number(m[3].padEnd(3, '0')) / 1000 : 0
-      times.push(Number(m[1]) * 60 + Number(m[2]) + frac)
+      const frac = m[4] ? Number(m[4].padEnd(3, '0')) / 1000 : 0
+      times.push((m[1] ? Number(m[1]) * 3600 : 0) + Number(m[2]) * 60 + Number(m[3]) + frac)
     }
-    const body = line.replace(tag, '').trim()
+    const body = line
+      .replace(tag, '')
+      .replace(/<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g, '')
+      .trim()
     if (!times.length || !body) continue
     for (const t of times) stamped.push({ start: t, text: body })
   }
@@ -121,9 +129,9 @@ function median(values: number[]): number {
 function isWordLevel(cues: Cue[]): boolean {
   if (cues.length < 20) return false
   const units = cues.map((c) => {
-    const cjk = (c.text.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu) ?? []).length
-    const latin = (c.text.match(/[A-Za-z0-9]+/g) ?? []).length
-    return cjk + latin
+    const cjk = (c.text.match(CJK_RE) ?? []).length
+    const words = (c.text.replace(CJK_RE, ' ').match(/[\p{L}\p{N}]+/gu) ?? []).length
+    return cjk + words
   })
   return median(units) <= 2 && median(cues.map((c) => c.end - c.start)) <= 1.5
 }
@@ -131,6 +139,7 @@ function isWordLevel(cues: Cue[]): boolean {
 export function looksLikeSubtitle(text: string): boolean {
   return (
     /\d{1,2}:\d{2}[,.]\d{1,3}\s*-->/.test(text) ||
+    /^\s*\d{1,2}:\d{2}:\d{2}\.\d{1,3}\s*,\s*\d{1,2}:\d{2}:\d{2}\.\d{1,3}\s*$/m.test(text) ||
     /^\s*\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]/m.test(text) ||
     looksLikeWordJson(text)
   )
@@ -150,10 +159,11 @@ export function parseSubtitles(input: string): ParsedSubtitles {
       /* fall through to text formats */
     }
   }
-  if (/-->/.test(text)) {
+  if (/-->/.test(text) || /^\s*\d{1,2}:\d{2}:\d{2}\.\d{1,3}\s*,\s*\d{1,2}:\d{2}:\d{2}\.\d{1,3}\s*$/m.test(text)) {
     const cues = parseSrtLike(text)
     cues.sort((a, b) => a.start - b.start)
-    return { cues, precise: isWordLevel(cues), kind: /^WEBVTT/.test(head) ? 'vtt' : 'srt' }
+    const kind: SubtitleKind = /^WEBVTT/.test(head) ? 'vtt' : /-->/.test(text) ? 'srt' : 'sbv'
+    return { cues, precise: isWordLevel(cues), kind }
   }
   const cues = parseLrc(text)
   cues.sort((a, b) => a.start - b.start)
