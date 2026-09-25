@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentType, type Drag
 import { ACCEPT } from '../lib/files'
 import { fmtBytes, fmtDate, fmtTime } from '../lib/format'
 import type { SessionMeta } from '../lib/storage'
+import { useFlags } from '../store/flags'
 import { useSession, type PendingFiles } from '../store/session'
 
 interface SlotProps {
@@ -103,6 +104,7 @@ export function Home() {
   const openStored = useSession((s) => s.openStored)
   const removeStored = useSession((s) => s.removeStored)
   const setError = useSession((s) => s.setError)
+  const demoDismissed = useFlags((f) => f.demoDismissed)
 
   const [pending, setPending] = useState<PendingFiles>({})
   const [drag, setDrag] = useState(false)
@@ -224,10 +226,12 @@ export function Home() {
             <button className="btn primary" disabled={!ready} onClick={() => void openPending(pending)}>
               开始阅读
             </button>
-            <button className="btn ghost" onClick={() => void openDemo()}>
-              <Sparkles size={16} />
-              试试示例：全球脑科学科研组织的二十年 · 30 分钟
-            </button>
+            {!demoDismissed && (
+              <button className="btn ghost" onClick={() => void openDemo()}>
+                <Sparkles size={16} />
+                试试示例：全球脑科学科研组织的二十年 · 30 分钟
+              </button>
+            )}
           </div>
         </section>
 

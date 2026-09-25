@@ -4,6 +4,7 @@ import { audioMime, classifyFile, readTextFile } from '../lib/files'
 import { stripExt } from '../lib/format'
 import { computePeaks } from '../lib/peaks'
 import { parseSubtitles } from '../lib/subtitles'
+import { useFlags } from './flags'
 import { usePlayer } from './player'
 import {
   deleteSession,
@@ -172,6 +173,7 @@ export const useSession = create<SessionState>()((set, get) => {
     },
 
     openDemo: async () => {
+      useFlags.getState().dismissDemo()
       const existing = get().recents.find((r) => r.demo)
       if (existing && (existing.demoVersion ?? 1) >= DEMO_VERSION) return get().openStored(existing.id)
       set({ status: 'loading', loadingMessage: '下载示例音频…', error: null })

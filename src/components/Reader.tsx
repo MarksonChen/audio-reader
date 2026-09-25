@@ -6,6 +6,7 @@ import { buildActiveIndex, findActive, indexOfId } from '../lib/active'
 import { fmtTime } from '../lib/format'
 import { KEYS, combo } from '../lib/platform'
 import { RATE_STEP, fmtRate, usePlayer } from '../store/player'
+import { useFlags } from '../store/flags'
 import { useSession } from '../store/session'
 import { FONT_SIZE_RANGE, useSettings } from '../store/settings'
 import { AppearancePicker, type PickerTab } from './AppearancePicker'
@@ -91,6 +92,14 @@ export function Reader() {
   }, [activeId, sentenceEnd, index, offset])
 
   useMediaSession(session?.title)
+
+  // Count listening time (only while playing); after a minute the demo button goes away for good.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (usePlayer.getState().playing && !useFlags.getState().demoDismissed) useFlags.getState().addListened(1)
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const rateError = usePlayer((p) => p.rateError)
   useEffect(() => {
