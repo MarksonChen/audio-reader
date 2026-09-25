@@ -874,35 +874,49 @@ h3.para .ts {
   display: flex;
   align-items: center;
   gap: 2px;
-  color: var(--fg-2);
+  padding: 0 4px; /* a little hover margin around the control */
+  /* Rest state is quiet grey; the accent only appears while the pointer is near or the slider is focused. */
+  --vol-fill: color-mix(in srgb, var(--muted) 55%, transparent);
+  --vol-rest: var(--line);
+  --vol-thumb: color-mix(in srgb, var(--muted) 70%, transparent);
+  --vol-icon: var(--muted);
+}
+.volume:hover,
+.volume:focus-within {
+  --vol-fill: var(--accent);
+  --vol-thumb: var(--accent);
+  --vol-icon: var(--fg-2);
 }
 .volume .icon-btn.sm {
-  color: var(--fg-2);
+  color: var(--vol-icon);
+}
+.volume .icon-btn.sm:hover:not(:disabled) {
+  color: var(--fg);
 }
 .volume-slider {
   width: 88px;
   height: 20px;
-  opacity: 0.85;
-  transition: opacity 0.15s;
 }
-.volume:hover .volume-slider,
-.volume-slider:focus-visible {
-  opacity: 1;
-}
-.volume-slider::-webkit-slider-runnable-track {
+.volume .volume-slider::-webkit-slider-runnable-track {
   height: 3px;
+  background: linear-gradient(90deg, var(--vol-fill) var(--p, 0%), var(--vol-rest) var(--p, 0%));
 }
-.volume-slider::-webkit-slider-thumb {
-  width: 12px;
-  height: 12px;
-  margin-top: -4.5px;
-}
-.volume-slider::-moz-range-track {
-  height: 3px;
-}
-.volume-slider::-moz-range-thumb {
+.volume .volume-slider::-webkit-slider-thumb {
   width: 10px;
   height: 10px;
+  margin-top: -3.5px;
+  border-color: var(--vol-thumb);
+  box-shadow: none;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.volume .volume-slider::-moz-range-track {
+  height: 3px;
+  background: linear-gradient(90deg, var(--vol-fill) var(--p, 0%), var(--vol-rest) var(--p, 0%));
+}
+.volume .volume-slider::-moz-range-thumb {
+  width: 8px;
+  height: 8px;
+  border-color: var(--vol-thumb);
 }
 .time {
   font-family: var(--font-mono);
