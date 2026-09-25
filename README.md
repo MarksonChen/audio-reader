@@ -43,7 +43,7 @@ uv run scripts/align.py 音频.mp3 字幕.srt
 
 ## 阅读设置
 
-![阅读设置](docs/images/settings.png)
+<img src="docs/images/settings.png" alt="阅读设置" width="800">
 
 右上角的滑杆图标（或 ⌘ ,）打开，分六组：
 
