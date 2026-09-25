@@ -882,7 +882,7 @@ h3.para .ts {
   --vol-icon: var(--muted);
 }
 .volume:hover,
-.volume:focus-within {
+.volume:has(.volume-slider:focus-visible) {
   --vol-fill: var(--accent);
   --vol-thumb: var(--accent);
   --vol-icon: var(--fg-2);

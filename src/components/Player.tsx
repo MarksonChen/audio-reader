@@ -101,8 +101,10 @@ function VolumeControl() {
         title={`音量 ${Math.round(shown * 100)}%`}
         aria-label="音量"
         onChange={(e) => setVolume(Number(e.target.value))}
+        onMouseUp={(e) => e.currentTarget.blur()}
         onKeyDown={(e) => {
-          if (e.key !== 'Escape') e.stopPropagation()
+          if (e.key === 'Escape') e.currentTarget.blur()
+          else e.stopPropagation()
         }}
       />
     </div>
