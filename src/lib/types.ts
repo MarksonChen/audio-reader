@@ -13,6 +13,8 @@ export interface Sentence {
   chars: string[]
   /** Estimated speech time (seconds) of every code point in `chars`. */
   times: Float64Array
+  /** Index (into `AlignedDoc.cueStarts`) of the subtitle cue each code point belongs to. */
+  cues: Int32Array
   start: number
   end: number
   /** True when enough characters were matched against the subtitle stream. */
@@ -46,5 +48,7 @@ export interface AlignedDoc {
   source: 'transcript' | 'subtitle'
   paragraphs: Paragraph[]
   sentences: Sentence[]
+  /** Start time of every subtitle cue, in order; used for block-wise highlighting. */
+  cueStarts: Float64Array
   stats: AlignStats
 }

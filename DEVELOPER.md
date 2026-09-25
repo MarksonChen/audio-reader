@@ -25,7 +25,7 @@ npm run lint       # oxlint
 src/lib        字幕解析、归一化、分句、对齐、字体 / 颜色目录、存储、波形峰值
 src/store      zustand 状态：播放器、会话、阅读设置
 src/components 首页、阅读器、正文、播放器、波形、设置面板、颜色 / 字体选择、搜索
-scripts/       align.py：stable-ts 强制对齐脚本（Python，见下）
+scripts/       align.py：普通字幕 → 逐词字幕的命令行工具（uv 脚本，见下）
 public/demo    示例：24k Opus 音频、ASR 字幕、原稿、词级时间 JSON
 ```
 
@@ -38,36 +38,42 @@ public/demo    示例：24k Opus 音频、ASR 字幕、原稿、词级时间 JSO
   连续 3 个字以上的相同片段作为锚点，其余字符在锚点之间线性插值。对齐在 Web Worker 中运行，30 分钟音频约 20 毫秒。
 - **分句**：按 。！？；… 等切句，过长的句子在逗号处二次切分；Markdown 标题会当作小标题显示。
 - **没有原稿时**：直接用字幕文字成文，按停顿与句末标点自动分段。原稿匹配率低于 20% 时也退回这个模式。
-- **词级 JSON**：每个词自带精确起止时间，跳过语速拉伸，只在词内部插值，按字点亮平滑推进。
+- **逐词字幕 / 词级 JSON**：每个词自带精确起止时间，跳过语速拉伸，只在词内部插值，按字点亮平滑推进。
 - **渲染**：当前句激活时一次性拆成单字 span，之后每帧只改颜色，不改动任何文本节点
   （早先每帧搬动文本节点的做法会在部分环境里让字形间歇性上移几个像素）。
 - **时长**：解码波形时得到精确时长；与 `<audio>` 报的值相差超过 1 秒就以解码值为准（Safari 会把 Ogg Opus 的时长估算偏大约 5%）。
 - **存储**：文件与进度存 IndexedDB（`idb-keyval`），设置存 localStorage（带版本迁移）。
 
-## 精确对齐（stable-ts）
+## 逐词字幕（stable-ts 强制对齐）
 
-字幕只能给出每条 cue 的起止时间，cue 内部的字是按语速插值的，会有零点几秒到一两秒的偏差。
-`scripts/align.py` 调用 [stable-ts](https://github.com/jianfch/stable-ts) 的 `align()` 做强制对齐：
-不做识别，只回答“原稿里每个字是在第几毫秒说的”。
+`scripts/align.py` 是一个自包含的 uv 脚本（PEP 723 内联依赖），输入音频加一份文字来源，输出逐词 SRT 与 JSON：
 
 ```bash
-# 一次性准备环境（约 1 分钟；模型首次运行会再下载 ~460 MB）
-uv venv --python 3.12 scripts/.venv
-uv pip install --python scripts/.venv/bin/python stable-ts
-
-# 对齐：输入音频 + 原稿，输出词级 JSON
-scripts/.venv/bin/python scripts/align.py 音频.mp3 原稿.txt -o 音频.words.json --model small
+uv run scripts/align.py 音频.mp3 字幕.srt              # 文字来源可以是 srt / vtt / lrc
+uv run scripts/align.py 音频.mp3 原稿.txt --model medium   # 或 txt / md 原稿
+uv run scripts/align.py --help
 ```
 
-把生成的 `*.words.json` 放到首页的「字幕」槽位（原稿槽位仍放 TXT）。JSON 也兼容 whisper / stable-ts 自带的
-`segments[].words[]` 结构。`--srt` 会额外输出一份词级 SRT 方便检查。
+- 它调用 [stable-ts](https://github.com/jianfch/stable-ts) 的 `align()`：不做识别，只回答“文字里的每个词在第几毫秒说出”。
+  文字与音频有出入时（原稿多几个字、少几个字）会被跳过或压缩，不会整体错位。
+- 字幕作为来源时，先剥掉序号与时间戳，把各条文字重新连成整段，让对齐器自己按标点分段
+  （ASR 字幕常在句中硬切行，按行分段会让对齐质量明显变差：示例里零时长词从 783 降到 216）。
+  原稿作为来源时按行分段。
+- 输出的 `.words.srt` 每个词一条；网页会按“每条只有一两个词、时长很短”自动识别为逐词字幕，进入逐字模式。
+  JSON 也兼容 whisper / stable-ts 自带的 `segments[].words[]` 结构。
+- 模型默认 `small`。在示例音频上，`medium` 慢 3 倍多、零时长词反而更多，与 `small` 的词起点中位数只差 80 毫秒，
+  对照 ASR 边界与音频能量起点都没有更准，所以不必升级模型。small 的时间戳相对真实发声整体晚约 50 到 100 毫秒，
+  需要的话在设置里把「高亮偏移」调到 +0.10 秒。
+- 30 分钟音频在 M4 Pro 上约 45 到 70 秒；首次运行 uv 会创建环境并下载模型（small 约 460 MB）。
 
-模型默认 `small`。在示例音频上，`medium` 慢 3 倍多、零时长词反而更多，与 `small` 的词起点中位数只差 80 毫秒，
-对照 ASR 边界与音频能量起点都没有更准，所以不必升级模型。small 的时间戳相对真实发声整体晚约 50 到 100 毫秒，
-需要的话在设置里把「高亮偏移」调到 +0.10 秒。
+> 若系统里有 conda 的 Python 被选中，torch 可能报 `OMP: Error #15`（两份 OpenMP 运行时）。
+> 加 `UV_PYTHON_PREFERENCE=only-managed` 让 uv 使用自管的解释器即可。
 
-> 如果 uv 选到了 conda 的 Python，torch 可能报 `OMP: Error #15`（两份 OpenMP 运行时）。
-> 用 `uv venv --python 3.12.9`（uv 自管的解释器）重建即可。
+## 高亮的两种模式
+
+- **逐词字幕**（`stats.precise`）：当前句拆成单字 span，已读的字为强调色，正在读的字按其时长渐变。
+- **普通字幕**：每个原稿字符记住它属于哪一条字幕（对齐锚点所在的 cue，未锚定的字符取最近锚点的 cue）；
+  当前时间落在哪条字幕，就把属于它及之前各条的字符整块变为强调色，没有字内渐变。点击字符跳到该条字幕的起点。
 
 ## 调试
 

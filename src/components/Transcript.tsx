@@ -11,10 +11,11 @@ interface ParagraphProps {
   activeId: number
   state: SentenceState
   showTs: boolean
+  blockCues?: Float64Array
   onSeek: (t: number) => void
 }
 
-const ParagraphView = memo(function ParagraphView({ p, sentences, activeId, state, showTs, onSeek }: ParagraphProps) {
+const ParagraphView = memo(function ParagraphView({ p, sentences, activeId, state, showTs, blockCues, onSeek }: ParagraphProps) {
   const Tag = p.kind === 'heading' ? (p.level <= 1 ? 'h2' : 'h3') : 'p'
   return (
     <Tag className={`para ${state}`} data-pid={p.id}>
@@ -28,6 +29,7 @@ const ParagraphView = memo(function ParagraphView({ p, sentences, activeId, stat
           key={s.id}
           s={s}
           state={state !== 'active' ? state : s.id === activeId ? 'active' : s.id < activeId ? 'past' : 'future'}
+          blockCues={blockCues}
           onSeek={onSeek}
         />
       ))}
@@ -67,6 +69,8 @@ export function Transcript({ doc, activeId, follow, onUserScroll, onSeek }: Prop
   const smoothScroll = useSettings((s) => s.smoothScroll)
 
   const slices = useMemo(() => doc.paragraphs.map((p) => doc.sentences.slice(p.from, p.to)), [doc])
+  // Ordinary subtitles colour text one cue at a time; word-level timing colours character by character.
+  const blockCues = doc.stats.precise ? undefined : doc.cueStarts
   const activePid = activeId >= 0 ? doc.sentences[activeId]?.para ?? -1 : -1
   // With paragraph-level following the view only moves when the paragraph changes.
   const followKey = followUnit === 'paragraph' ? activePid : activeId
@@ -169,6 +173,7 @@ export function Transcript({ doc, activeId, follow, onUserScroll, onSeek }: Prop
             activeId={activeId >= p.from && activeId < p.to ? activeId : -1}
             state={activeId < 0 ? 'future' : activeId >= p.to ? 'past' : activeId >= p.from ? 'active' : 'future'}
             showTs={showTs}
+            blockCues={blockCues}
             onSeek={onSeek}
           />
         ))}

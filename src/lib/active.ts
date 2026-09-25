@@ -37,6 +37,21 @@ export function indexOfId(index: ActiveIndex, id: number): number {
   return index.ids.indexOf(id)
 }
 
+/** Index of the last cue starting at or before `t`, or -1 (binary search on cue starts). */
+export function findCue(cueStarts: Float64Array, t: number): number {
+  let lo = 0
+  let hi = cueStarts.length - 1
+  let ans = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (cueStarts[mid] <= t) {
+      ans = mid
+      lo = mid + 1
+    } else hi = mid - 1
+  }
+  return ans
+}
+
 /** Number of characters of the sentence spoken by time `t` (binary search on per-char times). */
 export function spokenCount(times: Float64Array, t: number): number {
   let lo = 0

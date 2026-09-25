@@ -18,6 +18,10 @@ export interface AlignOptions {
 interface Stream {
   chars: string[]
   times: Float64Array
+  /** Cue index of every character. */
+  cueIdx: Int32Array
+  /** Start time of every cue that produced characters. */
+  cueStarts: Float64Array
   /** Content characters per second, estimated from the subtitle file. */
   rate: number
 }
@@ -52,6 +56,7 @@ export function buildSubtitleStream(cues: Cue[], precise = false): Stream {
   const rate = totalSpan > 0 && totalChars > 0 ? totalChars / totalSpan : 5
   const chars: string[] = []
   const times: number[] = []
+  const cueIdx: number[] = []
   for (let i = 0; i < items.length; i++) {
     const c = items[i]
     let effEnd: number
@@ -65,14 +70,22 @@ export function buildSubtitleStream(cues: Cue[], precise = false): Stream {
     if (chars.length && isAsciiWord(chars[chars.length - 1]) && isAsciiWord(c.chars[0])) {
       chars.push(' ')
       times.push(c.start)
+      cueIdx.push(i)
     }
     const n = c.chars.length
     for (let k = 0; k < n; k++) {
       chars.push(c.chars[k])
       times.push(c.start + (k / n) * (effEnd - c.start))
+      cueIdx.push(i)
     }
   }
-  return { chars, times: Float64Array.from(times), rate }
+  return {
+    chars,
+    times: Float64Array.from(times),
+    cueIdx: Int32Array.from(cueIdx),
+    cueStarts: Float64Array.from(items.map((c) => c.start)),
+    rate,
+  }
 }
 
 /** Fills the gaps between anchored characters by linear interpolation. */
@@ -102,12 +115,30 @@ function interpolate(anchor: Float64Array, rate: number, duration?: number): Flo
   return out
 }
 
+/** Every character gets the cue of its nearest anchored neighbour (earlier one preferred). */
+function fillCues(anchorCue: Int32Array): Int32Array {
+  const n = anchorCue.length
+  const out = new Int32Array(n)
+  let last = -1
+  for (let i = 0; i < n; i++) {
+    if (anchorCue[i] >= 0) last = anchorCue[i]
+    out[i] = last
+  }
+  let next = -1
+  for (let i = n - 1; i >= 0; i--) {
+    if (anchorCue[i] >= 0) next = anchorCue[i]
+    if (out[i] < 0) out[i] = next < 0 ? 0 : next
+  }
+  return out
+}
+
 function buildDoc(
   source: AlignedDoc['source'],
   seg: Segmented,
   times: Float64Array,
   anchor: Float64Array,
-  cueCount: number,
+  cueOf: Int32Array,
+  cueStarts: Float64Array,
   precise: boolean,
   t0: number,
 ): AlignedDoc {
@@ -119,6 +150,7 @@ function buildDoc(
     const s = seg.sentences[i]
     const chars = seg.chars.slice(s.from, s.to)
     const t = times.slice(s.from, s.to)
+    const cues = cueOf.slice(s.from, s.to)
     let content = 0
     let anchored = 0
     let start = NaN
@@ -147,6 +179,7 @@ function buildDoc(
       text: chars.join(''),
       chars,
       times: t,
+      cues,
       start,
       end,
       synced: content > 0 && anchored / content >= SYNC_RATIO,
@@ -184,8 +217,9 @@ function buildDoc(
     source,
     paragraphs,
     sentences,
+    cueStarts,
     stats: {
-      cues: cueCount,
+      cues: cueStarts.length,
       chars: seg.chars.length,
       content: totalContent,
       anchored: totalAnchored,
@@ -204,6 +238,7 @@ export function alignTranscript(transcript: string, cues: Cue[], opts: AlignOpti
   const nt = normalizeChars(seg.chars)
   const ns = normalizeChars(stream.chars)
   const anchor = new Float64Array(seg.chars.length).fill(NaN)
+  const anchorCue = new Int32Array(seg.chars.length).fill(-1)
   if (nt.norm.length && ns.norm.length) {
     const dmp = new DiffMatchPatch()
     dmp.Diff_Timeout = opts.timeoutSec ?? 30
@@ -214,7 +249,10 @@ export function alignTranscript(transcript: string, cues: Cue[], opts: AlignOpti
       const len = s.length
       if (op === 0) {
         if (len >= MIN_RUN) {
-          for (let k = 0; k < len; k++) anchor[nt.map[it + k]] = stream.times[ns.map[is + k]]
+          for (let k = 0; k < len; k++) {
+            anchor[nt.map[it + k]] = stream.times[ns.map[is + k]]
+            anchorCue[nt.map[it + k]] = stream.cueIdx[ns.map[is + k]]
+          }
         }
         it += len
         is += len
@@ -226,7 +264,7 @@ export function alignTranscript(transcript: string, cues: Cue[], opts: AlignOpti
     }
   }
   const times = interpolate(anchor, stream.rate, opts.duration)
-  return buildDoc('transcript', seg, times, anchor, cues.length, !!opts.precise, t0)
+  return buildDoc('transcript', seg, times, anchor, fillCues(anchorCue), stream.cueStarts, !!opts.precise, t0)
 }
 
 /** Builds a readable document straight from subtitles when no transcript is available. */

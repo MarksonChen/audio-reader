@@ -111,6 +111,23 @@ function looksLikeWordJson(text: string): boolean {
   return (head.startsWith('{') || head.startsWith('[')) && /"start"\s*:/.test(text) && /"(words|segments|word|text)"\s*:/.test(text)
 }
 
+function median(values: number[]): number {
+  if (!values.length) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  return sorted[Math.floor(sorted.length / 2)]
+}
+
+/** Word-level files (from forced alignment) have one word per cue: tiny texts and short durations. */
+function isWordLevel(cues: Cue[]): boolean {
+  if (cues.length < 20) return false
+  const units = cues.map((c) => {
+    const cjk = (c.text.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu) ?? []).length
+    const latin = (c.text.match(/[A-Za-z0-9]+/g) ?? []).length
+    return cjk + latin
+  })
+  return median(units) <= 2 && median(cues.map((c) => c.end - c.start)) <= 1.5
+}
+
 export function looksLikeSubtitle(text: string): boolean {
   return (
     /\d{1,2}:\d{2}[,.]\d{1,3}\s*-->/.test(text) ||
@@ -136,9 +153,9 @@ export function parseSubtitles(input: string): ParsedSubtitles {
   if (/-->/.test(text)) {
     const cues = parseSrtLike(text)
     cues.sort((a, b) => a.start - b.start)
-    return { cues, precise: false, kind: /^WEBVTT/.test(head) ? 'vtt' : 'srt' }
+    return { cues, precise: isWordLevel(cues), kind: /^WEBVTT/.test(head) ? 'vtt' : 'srt' }
   }
   const cues = parseLrc(text)
   cues.sort((a, b) => a.start - b.start)
-  return { cues, precise: false, kind: 'lrc' }
+  return { cues, precise: isWordLevel(cues), kind: 'lrc' }
 }
