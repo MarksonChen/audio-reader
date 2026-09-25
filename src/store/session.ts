@@ -49,7 +49,7 @@ interface SessionState {
 
 const DEMO_TITLE = '全球脑科学科研组织的二十年'
 /** Bump when the bundled demo files change so cached copies get refreshed. */
-const DEMO_VERSION = 6
+const DEMO_VERSION = 7
 
 let toastTimer = 0
 let loadSeq = 0
