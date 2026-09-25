@@ -21,6 +21,8 @@ interface PlayerState {
   duration: number
   playing: boolean
   rate: number
+  volume: number
+  muted: boolean
   ready: boolean
   /** performance.now() of the last programmatic seek, to tell jumps from natural progression. */
   lastSeekAt: number
@@ -35,6 +37,8 @@ interface PlayerState {
   skip: (dt: number) => void
   setRate: (r: number) => void
   adjustRate: (delta: number) => void
+  setVolume: (v: number) => void
+  toggleMute: () => void
   /** Trusts a decoded duration over the element's own when they disagree (Safari + Ogg). */
   setDurationHint: (d: number) => void
   clearRateError: () => void
@@ -60,6 +64,8 @@ export const usePlayer = create<PlayerState>()((set, get) => {
     duration: 0,
     playing: false,
     rate: 1,
+    volume: 1,
+    muted: false,
     ready: false,
     lastSeekAt: 0,
     durationHint: 0,
@@ -90,9 +96,12 @@ export const usePlayer = create<PlayerState>()((set, get) => {
       el.addEventListener('timeupdate', onTime)
       el.addEventListener('seeked', onTime)
       el.addEventListener('ratechange', onRate)
-      const rate = useSettings.getState().rate || 1
+      const { rate: savedRate, volume, muted } = useSettings.getState()
+      const rate = savedRate || 1
       el.playbackRate = rate
-      set({ el, rate, currentTime: el.currentTime, playing: !el.paused, ready: el.readyState >= 1 })
+      el.volume = Math.min(1, Math.max(0, volume))
+      el.muted = muted
+      set({ el, rate, volume: el.volume, muted, currentTime: el.currentTime, playing: !el.paused, ready: el.readyState >= 1 })
       if (el.readyState >= 1) onMeta()
       return () => {
         stopLoop()
@@ -141,6 +150,25 @@ export const usePlayer = create<PlayerState>()((set, get) => {
       useSettings.getState().update({ rate: r })
     },
     adjustRate: (delta) => get().setRate(get().rate + delta),
+    setVolume: (raw) => {
+      const v = Math.round(Math.min(1, Math.max(0, raw)) * 100) / 100
+      const { el } = get()
+      // Dragging the slider up from zero also un-mutes; dragging to zero is just "silent", not muted.
+      const muted = v === 0 ? get().muted : false
+      if (el) {
+        el.volume = v
+        el.muted = muted
+      }
+      set({ volume: v, muted })
+      useSettings.getState().update({ volume: v, muted })
+    },
+    toggleMute: () => {
+      const { el, muted, volume } = get()
+      const next = !muted
+      if (el) el.muted = next
+      set({ muted: next })
+      useSettings.getState().update({ muted: next, volume })
+    },
     setDurationHint: (d) => {
       if (!Number.isFinite(d) || d <= 0) return
       const { el, duration } = get()

@@ -304,7 +304,10 @@ export function SettingsPanel({ onClose, onPick }: { onClose: () => void; onPick
             className="link"
             onClick={() => {
               update(DEFAULT_SETTINGS)
-              usePlayer.getState().setRate(DEFAULT_SETTINGS.rate)
+              const player = usePlayer.getState()
+              player.setRate(DEFAULT_SETTINGS.rate)
+              player.setVolume(DEFAULT_SETTINGS.volume)
+              if (player.muted !== DEFAULT_SETTINGS.muted) player.toggleMute()
             }}
           >
             恢复默认

@@ -39,6 +39,9 @@ export interface Settings {
   // 播放
   skipSeconds: number
   rate: number
+  /** 0–1, applied to the audio element and remembered across sessions. */
+  volume: number
+  muted: boolean
   sentenceEnd: SentenceEnd
   playOnClick: boolean
   // 显示
@@ -71,6 +74,8 @@ export const DEFAULT_SETTINGS: Settings = {
   smoothScroll: true,
   skipSeconds: 15,
   rate: 1,
+  volume: 1,
+  muted: false,
   sentenceEnd: 'continue',
   playOnClick: true,
   showTimestamps: true,

@@ -338,6 +338,11 @@ export function Reader() {
         case 'F':
           setFollow((f) => !f)
           break
+        case 'm':
+        case 'M':
+          p.toggleMute()
+          showToast(usePlayer.getState().muted ? '已静音' : `音量 ${Math.round(usePlayer.getState().volume * 100)}%`)
+          break
         case 'z':
         case 'Z':
           toggleImmersive()

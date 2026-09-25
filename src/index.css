@@ -867,8 +867,42 @@ h3.para .ts {
 .ctl-right {
   display: flex;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 10px;
   align-items: center;
+}
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--fg-2);
+}
+.volume .icon-btn.sm {
+  color: var(--fg-2);
+}
+.volume-slider {
+  width: 88px;
+  height: 20px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.volume:hover .volume-slider,
+.volume-slider:focus-visible {
+  opacity: 1;
+}
+.volume-slider::-webkit-slider-runnable-track {
+  height: 3px;
+}
+.volume-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
+}
+.volume-slider::-moz-range-track {
+  height: 3px;
+}
+.volume-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
 }
 .time {
   font-family: var(--font-mono);
@@ -1668,6 +1702,9 @@ kbd {
   .pill-btn {
     width: 58px;
     padding: 6px 0;
+  }
+  .volume {
+    display: none; /* phones control volume with hardware buttons and ignore the element's volume */
   }
   .player-inner {
     padding: 8px 14px 10px;

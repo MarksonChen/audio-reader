@@ -1,4 +1,4 @@
-import { Minus, Pause, Play, Plus, RotateCcw, RotateCw, SkipBack, SkipForward } from 'lucide-react'
+import { Minus, Pause, Play, Plus, RotateCcw, RotateCw, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react'
 import {
   useEffect,
   useLayoutEffect,
@@ -66,6 +66,47 @@ function useHold(fn: () => void) {
   }
   useEffect(() => stop, [])
   return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop, onPointerCancel: stop, onKeyDown }
+}
+
+/** Mute button plus a slim slider; the wheel over either nudges by 5 %. Hidden on phones, which ignore volume. */
+function VolumeControl() {
+  const volume = usePlayer((s) => s.volume)
+  const muted = usePlayer((s) => s.muted)
+  const setVolume = usePlayer((s) => s.setVolume)
+  const toggleMute = usePlayer((s) => s.toggleMute)
+  const shown = muted ? 0 : volume
+  const Icon = shown === 0 ? VolumeX : shown < 0.5 ? Volume1 : Volume2
+  const wheelAcc = useRef(0)
+  const onWheel = (e: WheelEvent) => {
+    if (e.deltaY === 0) return
+    wheelAcc.current += e.deltaY
+    const steps = Math.trunc(wheelAcc.current / WHEEL_STEP_PX)
+    if (!steps) return
+    wheelAcc.current -= steps * WHEEL_STEP_PX
+    setVolume((muted ? 0 : volume) - steps * 0.05)
+  }
+  return (
+    <div className="volume" onWheel={onWheel}>
+      <button className="icon-btn sm" title={muted ? '取消静音 (M)' : '静音 (M)'} aria-label={muted ? '取消静音' : '静音'} aria-pressed={muted} onMouseUp={blur} onClick={toggleMute}>
+        <Icon size={16} />
+      </button>
+      <input
+        className="range volume-slider"
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={shown}
+        style={{ ['--p' as string]: `${shown * 100}%` }}
+        title={`音量 ${Math.round(shown * 100)}%`}
+        aria-label="音量"
+        onChange={(e) => setVolume(Number(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key !== 'Escape') e.stopPropagation()
+        }}
+      />
+    </div>
+  )
 }
 
 /** Speed pill: click for a popover with 0.05 steps, a slider and a typed value; wheel over it to nudge. */
@@ -214,6 +255,7 @@ export function Player({ peaks, slim, skipSeconds, onSeek, onPrevSentence, onNex
             </button>
           </div>
           <div className="ctl-right">
+            <VolumeControl />
             <SpeedControl />
           </div>
         </div>
